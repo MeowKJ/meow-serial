@@ -1,0 +1,238 @@
+// 基础控件
+export * from './base'
+
+// 控件组件索引
+export { default as WaveformWidget } from './WaveformWidget.vue'
+export { default as ValueWidget } from './ValueWidget.vue'
+export { default as GaugeWidget } from './GaugeWidget.vue'
+export { default as ButtonWidget } from './ButtonWidget.vue'
+export { default as SliderWidget } from './SliderWidget.vue'
+export { default as LedWidget } from './LedWidget.vue'
+export { default as FFTWidget } from './FFTWidget.vue'
+export { default as TerminalWidget } from './TerminalWidget.vue'
+export { default as TriggerWidget } from './TriggerWidget.vue'
+export { default as CalculatorWidget } from './CalculatorWidget.vue'
+export { default as HistogramWidget } from './HistogramWidget.vue'
+export { default as XYPlotWidget } from './XYPlotWidget.vue'
+
+// 控件类型配置
+export const widgetTypes = [
+  { 
+    type: 'waveform', 
+    name: '波形图', 
+    icon: '📈', 
+    desc: '多通道实时波形', 
+    category: '显示',
+    defaultW: 400, 
+    defaultH: 200,
+    minW: 200,
+    minH: 100
+  },
+  { 
+    type: 'fft', 
+    name: 'FFT频谱', 
+    icon: '📊', 
+    desc: '频谱分析', 
+    category: '显示',
+    defaultW: 300, 
+    defaultH: 180,
+    minW: 200,
+    minH: 100
+  },
+  { 
+    type: 'histogram', 
+    name: '直方图', 
+    icon: '📶', 
+    desc: '数据分布统计', 
+    category: '显示',
+    defaultW: 250, 
+    defaultH: 180,
+    minW: 150,
+    minH: 100
+  },
+  { 
+    type: 'xyplot', 
+    name: 'XY散点图', 
+    icon: '⚬', 
+    desc: '双通道相关性', 
+    category: '显示',
+    defaultW: 200, 
+    defaultH: 200,
+    minW: 150,
+    minH: 150
+  },
+  { 
+    type: 'value', 
+    name: '数值显示', 
+    icon: '🔢', 
+    desc: '大字体数值', 
+    category: '显示',
+    defaultW: 150, 
+    defaultH: 100,
+    minW: 100,
+    minH: 60
+  },
+  { 
+    type: 'gauge', 
+    name: '仪表盘', 
+    icon: '⏱️', 
+    desc: '圆弧仪表', 
+    category: '显示',
+    defaultW: 150, 
+    defaultH: 130,
+    minW: 100,
+    minH: 100
+  },
+  { 
+    type: 'button', 
+    name: '按钮', 
+    icon: '🔘', 
+    desc: '发送命令', 
+    category: '控制',
+    defaultW: 140, 
+    defaultH: 70,
+    minW: 100,
+    minH: 50
+  },
+  { 
+    type: 'slider', 
+    name: '滑块', 
+    icon: '🎚️', 
+    desc: '参数调节', 
+    category: '控制',
+    defaultW: 200, 
+    defaultH: 80,
+    minW: 150,
+    minH: 60
+  },
+  { 
+    type: 'led', 
+    name: 'LED指示灯', 
+    icon: '💡', 
+    desc: '状态指示', 
+    category: '显示',
+    defaultW: 180, 
+    defaultH: 70,
+    minW: 120,
+    minH: 50
+  },
+  { 
+    type: 'terminal', 
+    name: '迷你终端', 
+    icon: '📟', 
+    desc: '数据日志', 
+    category: '工具',
+    defaultW: 280, 
+    defaultH: 150,
+    minW: 200,
+    minH: 100
+  },
+  { 
+    type: 'trigger', 
+    name: '触发器', 
+    icon: '⚡', 
+    desc: '条件触发执行', 
+    category: '高级',
+    defaultW: 250, 
+    defaultH: 100,
+    minW: 200,
+    minH: 80
+  },
+  { 
+    type: 'calculator', 
+    name: '计算器', 
+    icon: '🧮', 
+    desc: '数据运算', 
+    category: '高级',
+    defaultW: 200, 
+    defaultH: 120,
+    minW: 150,
+    minH: 100
+  }
+]
+
+// 按类别分组
+export const widgetCategories = {
+  '显示': widgetTypes.filter(w => w.category === '显示'),
+  '控制': widgetTypes.filter(w => w.category === '控制'),
+  '高级': widgetTypes.filter(w => w.category === '高级'),
+  '工具': widgetTypes.filter(w => w.category === '工具')
+}
+
+// 获取控件默认配置
+export const getWidgetDefaults = (type) => {
+  const widgetType = widgetTypes.find(w => w.type === type)
+  if (!widgetType) return {}
+  
+  const defaults = {
+    type: widgetType.type,
+    title: widgetType.name,
+    w: widgetType.defaultW,
+    h: widgetType.defaultH,
+    minW: widgetType.minW || 100,
+    minH: widgetType.minH || 60,
+    // 使用新的数据源配置
+    dataSource: {
+      type: 'channel',
+      channelId: 0
+    },
+    // 兼容旧版本
+    channel: 0,
+    visible: true,
+    enabled: true,
+    zIndex: 0,
+    locked: false
+  }
+  
+  // 特定类型的默认值
+  switch (type) {
+    case 'button':
+      defaults.label = '发送喵'
+      defaults.command = ''
+      break
+    case 'slider':
+      defaults.label = '参数'
+      defaults.value = 50
+      defaults.min = 0
+      defaults.max = 100
+      break
+    case 'gauge':
+      defaults.min = 0
+      defaults.max = 100
+      defaults.unit = '%'
+      break
+    case 'value':
+      defaults.precision = 2
+      defaults.unit = ''
+      break
+    case 'trigger':
+      defaults.condition = '>'
+      defaults.threshold = 50
+      defaults.action = ''
+      break
+    case 'calculator':
+      defaults.expression = ''
+      defaults.precision = 2
+      break
+    case 'histogram':
+      defaults.bins = 20
+      break
+    case 'xyplot':
+      defaults.xChannel = 0
+      defaults.yChannel = 1
+      defaults.dataSource = {
+        type: 'channels',
+        channelIds: [0, 1]
+      }
+      break
+    case 'waveform':
+      defaults.dataSource = {
+        type: 'channels',
+        channelIds: [0, 1, 2]
+      }
+      defaults.channels = [0, 1, 2]
+      break
+  }
+  
+  return defaults
+}

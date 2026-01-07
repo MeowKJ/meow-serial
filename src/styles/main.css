@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* 默认值，会被主题系统覆盖 */
+  --cat-primary: #7DD3FC;
+  --cat-secondary: #38BDF8;
+  --cat-accent: #BAE6FD;
+  --cat-warm: #E0F2FE;
+  --cat-bg: #0F172A;
+  --cat-card: #1E293B;
+  --cat-surface: #334155;
+  --cat-border: #475569;
+  --cat-text: #F1F5F9;
+  --cat-muted: #94A3B8;
+  --cat-dark: #0F172A;
+  --cat-success: #10B981;
+  --cat-warning: #F59E0B;
+  --cat-error: #EF4444;
+  --cat-info: #3B82F6;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--cat-bg);
+  color: var(--cat-text);
+  overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cat-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cat-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cat-primary);
+}
+
+/* 主按钮 */
+.cat-btn {
+  background: linear-gradient(135deg, var(--cat-primary) 0%, var(--cat-secondary) 100%);
+  transition: all 0.2s ease;
+}
+
+.cat-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.cat-btn:active {
+  transform: translateY(0);
+}
+
+/* 次要按钮 */
+.cat-btn-secondary {
+  background: var(--cat-surface);
+  border: 1px solid var(--cat-border);
+  transition: all 0.2s ease;
+}
+
+.cat-btn-secondary:hover {
+  background: var(--cat-border);
+  border-color: var(--cat-primary);
+}
+
+/* 控件选中状态 */
+.widget-selected {
+  outline: 2px solid var(--cat-primary);
+  outline-offset: 2px;
+}
+
+/* 缩放手柄 */
+.resize-handle {
+  position: absolute;
+  background: var(--cat-primary);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.widget-container:hover .resize-handle,
+.widget-selected .resize-handle {
+  opacity: 1;
+}
+
+/* 网格背景 */
+.grid-pattern {
+  background-image:
+    linear-gradient(var(--cat-surface) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cat-surface) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* 猫爪背景 */
+.paw-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Ctext x='30' y='35' text-anchor='middle' font-size='20' opacity='0.03'%3E🐾%3C/text%3E%3C/svg%3E");
+}
+
+/* 右键菜单 */
+.context-menu {
+  background: var(--cat-card);
+  border: 1px solid var(--cat-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+/* 平滑过渡 */
+.smooth-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 选择文本样式 */
+::selection {
+  background: var(--cat-primary);
+  opacity: 0.3;
+  color: var(--cat-text);
+}
+
+/* 输入框聚焦 */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--cat-primary) !important;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar-track {
+  background: var(--cat-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cat-border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cat-primary);
+}
