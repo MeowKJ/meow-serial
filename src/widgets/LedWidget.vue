@@ -17,7 +17,7 @@ const defaultLeds = computed(() => {
     { name: 'PWR', color: colors.success, threshold: 0, channel: 0 },
     { name: 'RUN', color: colors.info, threshold: 30, channel: 0 },
     { name: 'ERR', color: colors.error, threshold: 80, channel: 0 }
-  ]
+]
 })
 
 // 获取LED配置

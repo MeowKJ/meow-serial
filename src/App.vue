@@ -11,6 +11,7 @@ import ProtocolView from './components/ProtocolView.vue'
 import ReplayView from './components/ReplayView.vue'
 import WidgetPanel from './components/WidgetPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
+import TerminalSettingsPanel from './components/TerminalSettingsPanel.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import CatMascot from './components/CatMascot.vue'
 
@@ -29,6 +30,7 @@ const isPaused = ref(false)
 const isRecording = ref(false)
 const showWidgetPanel = ref(false)
 const showSettingsPanel = ref(true)
+const showTerminalSettings = ref(true)
 const selectedWidgetId = ref(null)
 
 // 右键菜单
@@ -51,6 +53,43 @@ const clearAll = () => {
 
 const closeContextMenu = () => {
   contextMenu.value.visible = false
+}
+
+// 导出日志
+const handleExportLog = ({ format }) => {
+  const logs = store.terminalLogs
+  let content = ''
+  let filename = `serial_log_${new Date().toISOString().slice(0,19).replace(/[:-]/g, '')}`
+
+  if (format === 'json') {
+    content = JSON.stringify(logs.map(l => ({
+      time: l.time,
+      dir: l.dir,
+      data: l.data,
+      type: l.type
+    })), null, 2)
+    filename += '.json'
+  } else if (format === 'csv') {
+    content = 'Time,Direction,Data\n' + logs.map(l => {
+      const dir = l.dir === 'rx' ? 'RX' : (l.dir === 'tx' ? 'TX' : 'SYS')
+      return `"${l.time}","${dir}","${l.data.replace(/"/g, '""')}"`
+    }).join('\n')
+    filename += '.csv'
+  } else {
+    content = logs.map(l => {
+      const dir = l.dir === 'rx' ? 'RX' : (l.dir === 'tx' ? 'TX' : 'SYS')
+      return `[${l.time}] [${dir}] ${l.data}`
+    }).join('\n')
+    filename += '.txt'
+  }
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // 全局点击关闭菜单
@@ -122,12 +161,17 @@ onMounted(() => {
         </div>
       </main>
 
-      <!-- 右侧设置面板 -->
-      <SettingsPanel 
-        v-if="showSettingsPanel"
+      <!-- 右侧设置面板 - 根据标签页显示不同面板 -->
+      <SettingsPanel
+        v-if="showSettingsPanel && activeTab === 'canvas'"
         :widget="selectedWidget"
         @close="showSettingsPanel = false"
         @delete="selectedWidgetId = null"
+      />
+      <TerminalSettingsPanel
+        v-if="showTerminalSettings && activeTab === 'terminal'"
+        @close="showTerminalSettings = false"
+        @export-log="handleExportLog"
       />
     </div>
 

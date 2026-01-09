@@ -197,8 +197,39 @@ onMounted(() => {
             </div>
           </div>
 
+          <!-- 自动重连开关 -->
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-cat-muted">自动重连</label>
+            <button
+              @click="store.autoReconnect = !store.autoReconnect"
+              :class="[
+                'relative w-10 h-5 rounded-full transition-colors',
+                store.autoReconnect ? 'bg-cat-primary' : 'bg-cat-surface border border-cat-border'
+              ]"
+            >
+              <span
+                :class="[
+                  'absolute top-0.5 w-4 h-4 rounded-full transition-all',
+                  store.autoReconnect ? 'left-5 bg-white' : 'left-0.5 bg-cat-muted'
+                ]"
+              ></span>
+            </button>
+          </div>
+
+          <!-- 重连状态提示 -->
+          <div v-if="store.reconnecting" class="text-xs text-cat-primary bg-cat-primary/10 px-3 py-2 rounded-lg">
+            <div class="flex items-center gap-2">
+              <span class="animate-spin">🔄</span>
+              <span>等待重连...</span>
+              <button @click="store.stopAutoReconnect()" class="ml-auto text-cat-muted hover:text-cat-text">✕</button>
+            </div>
+            <div v-if="store.reconnectTargetName" class="mt-1 text-cat-text font-medium truncate">
+              {{ store.reconnectTargetName }}
+            </div>
+          </div>
+
           <!-- 错误提示 -->
-          <div v-if="store.lastError" class="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">
+          <div v-if="store.lastError && !store.reconnecting" class="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">
             {{ store.lastError }}
           </div>
 
@@ -284,6 +315,41 @@ onMounted(() => {
             <code class="text-xs text-cat-primary font-mono break-all">
               {{ protocolTypes.find(p => p.value === currentProtocol)?.example }}
             </code>
+          </div>
+          
+          <!-- 数据输出选项 -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between p-2 bg-cat-surface rounded-lg">
+              <div class="flex-1">
+                <div class="text-xs font-medium text-cat-text">等待LF才输出</div>
+                <div class="text-[10px] text-cat-muted mt-0.5">关闭时实时输出所有数据</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  v-model="store.protocol.waitForLF"
+                  @change="store.setProtocol({ waitForLF: store.protocol.waitForLF })"
+                  class="sr-only peer"
+                >
+                <div class="w-11 h-6 bg-cat-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-cat-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cat-primary"></div>
+              </label>
+            </div>
+            
+            <div class="flex items-center justify-between p-2 bg-cat-surface rounded-lg">
+              <div class="flex-1">
+                <div class="text-xs font-medium text-cat-text">过滤空行</div>
+                <div class="text-[10px] text-cat-muted mt-0.5">开启时忽略只包含空白字符的行</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  v-model="store.protocol.filterEmptyLines"
+                  @change="store.setProtocol({ filterEmptyLines: store.protocol.filterEmptyLines })"
+                  class="sr-only peer"
+                >
+                <div class="w-11 h-6 bg-cat-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-cat-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cat-primary"></div>
+              </label>
+            </div>
           </div>
           
           <!-- 协议说明 -->

@@ -23,6 +23,13 @@ export const useSerialStore = defineStore('serial', () => {
   // 错误信息
   const lastError = ref('')
 
+  // 自动重连
+  const autoReconnect = ref(true)
+  const reconnecting = ref(false)
+  const reconnectTargetName = ref('') // 重连目标端口名称，用于UI显示
+  let reconnectTimer = null
+  let lastPortInfo = null // 保存最后连接的端口信息用于重连
+
   // ===== 数据统计 =====
   const totalRx = ref(0)
   const totalTx = ref(0)
@@ -32,6 +39,9 @@ export const useSerialStore = defineStore('serial', () => {
   
   // 统计更新定时器
   let statsInterval = null
+
+  // 端口列表刷新定时器
+  let portsRefreshInterval = null
 
   // ===== 数据通道 =====
   // 获取主题系统的通道颜色
@@ -80,7 +90,9 @@ export const useSerialStore = defineStore('serial', () => {
     type: 'line',
     separator: ',',
     endMark: '\n',
-    customParser: ''
+    customParser: '',
+    waitForLF: false,        // 等待LF才输出（默认关闭，保持原生实时输出）
+    filterEmptyLines: false // 过滤空行（默认关闭）
   })
 
   // ===== 控件 =====
@@ -92,7 +104,7 @@ export const useSerialStore = defineStore('serial', () => {
   // 数据接收回调
   serialManager.onData = (data) => {
     // 添加到终端日志（包含原始字节数据用于HEX显示）
-    addLog('rx', data.text, 'ascii', data.raw)
+    addLog('rx', data.text, 'utf8', data.raw)
     
     // 解析数据并更新通道
     if (data.parsed && data.parsed.type === 'values') {
@@ -122,11 +134,19 @@ export const useSerialStore = defineStore('serial', () => {
   serialManager.onConnect = (info) => {
     connected.value = true
     connecting.value = false
+    reconnecting.value = false
     lastError.value = ''
-    
+
+    // 保存端口信息用于自动重连
+    lastPortInfo = {
+      vendorId: info.port?.getInfo?.()?.usbVendorId,
+      productId: info.port?.getInfo?.()?.usbProductId,
+      portName: selectedPortName.value
+    }
+
     // 启动统计更新
     startStatsUpdate()
-    
+
     addLog('system', `已连接到 ${selectedPortName.value}，波特率 ${baudRate.value}`)
   }
   
@@ -134,18 +154,114 @@ export const useSerialStore = defineStore('serial', () => {
   serialManager.onDisconnect = (info) => {
     connected.value = false
     connecting.value = false
-    
+
     // 停止统计更新
     stopStatsUpdate()
-    
-    const reason = info.reason === 'device' ? '设备已断开' : '用户断开'
-    addLog('system', `连接已断开: ${reason}`)
+
+    // 如果是设备断开，清理端口引用（旧的port引用已失效）
+    if (info.reason === 'device') {
+      const disconnectedPortName = selectedPortName.value
+      selectedPort.value = null
+
+      addLog('system', `连接已断开: ${disconnectedPortName} 设备已拔出`)
+
+      // 启动自动重连
+      if (autoReconnect.value && lastPortInfo) {
+        reconnectTargetName.value = disconnectedPortName
+        startAutoReconnect()
+      }
+    } else {
+      // 用户主动断开，清理重连状态
+      stopAutoReconnect()
+      lastPortInfo = null
+      reconnectTargetName.value = ''
+      addLog('system', `连接已断开: 用户断开`)
+    }
   }
   
   // 错误回调
   serialManager.onError = (error) => {
     lastError.value = error.message
     addLog('error', `错误: ${error.message}`)
+  }
+
+  // 设备变化回调（设备插入/拔出）
+  serialManager.onDeviceChange = async (event) => {
+    // 立即刷新端口列表
+    await refreshPorts()
+
+    if (event.type === 'connect') {
+      // 设备插入
+      const port = event.port
+      const info = port?.getInfo?.()
+      const portName = getPortNameFromInfo(info)
+      addLog('system', `检测到设备插入: ${portName}`)
+
+      // 如果正在等待重连，尝试自动连接
+      if (reconnecting.value && autoReconnect.value && lastPortInfo) {
+        // 检查是否匹配之前的设备
+        let isMatch = false
+        if (lastPortInfo.vendorId && lastPortInfo.productId) {
+          isMatch = info?.usbVendorId === lastPortInfo.vendorId &&
+                    info?.usbProductId === lastPortInfo.productId
+        }
+
+        if (isMatch) {
+          addLog('system', `设备匹配，正在自动重连 ${reconnectTargetName.value}...`)
+          // 找到匹配的端口并连接
+          const matchedPort = ports.value.find(p => {
+            const pInfo = p.port?.getInfo?.()
+            return pInfo?.usbVendorId === info?.usbVendorId &&
+                   pInfo?.usbProductId === info?.usbProductId
+          })
+
+          if (matchedPort) {
+            selectPort(matchedPort)
+            // 稍微延迟一下让端口准备好
+            setTimeout(async () => {
+              const success = await connect()
+              if (success) {
+                stopAutoReconnect()
+              }
+            }, 300)
+          }
+        }
+      }
+    } else if (event.type === 'disconnect') {
+      // 设备拔出（非当前连接的设备）
+      const port = event.port
+      const info = port?.getInfo?.()
+      const portName = getPortNameFromInfo(info)
+
+      // 如果拔出的是当前选中但未连接的设备，清理选择
+      if (!connected.value && selectedPort.value) {
+        const selectedInfo = selectedPort.value?.getInfo?.()
+        if (selectedInfo?.usbVendorId === info?.usbVendorId &&
+            selectedInfo?.usbProductId === info?.usbProductId) {
+          selectedPort.value = null
+          selectedPortName.value = ''
+          addLog('system', `选中的设备已拔出: ${portName}`)
+        }
+      }
+    }
+  }
+
+  // 根据设备信息生成端口名称
+  const getPortNameFromInfo = (info) => {
+    const knownVendors = {
+      0x0403: 'FTDI',
+      0x067B: 'Prolific',
+      0x10C4: 'Silicon Labs',
+      0x1A86: 'CH340',
+      0x2341: 'Arduino',
+      0x239A: 'Adafruit',
+      0x303A: 'Espressif',
+      0x1366: 'SEGGER'
+    }
+    const vendorName = knownVendors[info?.usbVendorId] || ''
+    if (vendorName) return vendorName
+    if (info?.usbVendorId) return `VID:${info.usbVendorId.toString(16).toUpperCase()}`
+    return '未知设备'
   }
 
   // ===== 方法 =====
@@ -155,14 +271,22 @@ export const useSerialStore = defineStore('serial', () => {
    */
   const refreshPorts = async () => {
     if (!isSupported.value) return
-    
+
     const portList = await serialManager.getPorts()
-    ports.value = portList.map(p => ({
+    const newPorts = portList.map(p => ({
       name: p.name,
       port: p.port,
       vendorId: p.vendorId,
       productId: p.productId
     }))
+
+    // 只有当端口列表变化时才更新（通过比较名称列表）
+    const oldNames = ports.value.map(p => p.name).sort().join(',')
+    const newNames = newPorts.map(p => p.name).sort().join(',')
+
+    if (oldNames !== newNames) {
+      ports.value = newPorts
+    }
   }
   
   /**
@@ -195,17 +319,29 @@ export const useSerialStore = defineStore('serial', () => {
     connecting.value = true
     lastError.value = ''
     
+    // 应用协议配置
+    serialManager.setProtocol({
+      type: protocol.value.type || 'line',
+      delimiter: protocol.value.endMark || '\n',
+      length: protocol.value.length || 0,
+      waitForLF: protocol.value.waitForLF,
+      filterEmptyLines: protocol.value.filterEmptyLines
+    })
+    
     const success = await serialManager.connect(selectedPort.value, {
       baudRate: baudRate.value,
       dataBits: dataBits.value,
       stopBits: stopBits.value,
       parity: parity.value
     })
-    
+
     if (!success) {
       connecting.value = false
+      // 连接失败时清理端口选择并刷新列表，可能是端口已失效
+      selectedPort.value = null
+      await refreshPorts()
     }
-    
+
     return success
   }
   
@@ -272,9 +408,64 @@ export const useSerialStore = defineStore('serial', () => {
   }
 
   /**
+   * 启动自动重连
+   * 主要依靠设备插入事件触发，轮询作为备用机制
+   */
+  const startAutoReconnect = () => {
+    if (reconnecting.value) return // 已经在重连中
+
+    reconnecting.value = true
+    addLog('system', `等待 ${reconnectTargetName.value} 重新插入...`)
+
+    // 备用轮询机制，每3秒检查一次（主要依靠设备事件）
+    reconnectTimer = setInterval(async () => {
+      if (!autoReconnect.value || connected.value) {
+        stopAutoReconnect()
+        return
+      }
+
+      // 静默刷新端口列表
+      await refreshPorts()
+
+      // 尝试找到匹配的端口
+      if (lastPortInfo && ports.value.length > 0) {
+        const matchedPort = ports.value.find(p => {
+          const info = p.port?.getInfo?.()
+          if (lastPortInfo.vendorId && lastPortInfo.productId) {
+            return info?.usbVendorId === lastPortInfo.vendorId &&
+                   info?.usbProductId === lastPortInfo.productId
+          }
+          return false
+        })
+
+        if (matchedPort) {
+          addLog('system', `检测到 ${reconnectTargetName.value}，正在重连...`)
+          selectPort(matchedPort)
+          const success = await connect()
+          if (success) {
+            stopAutoReconnect()
+          }
+        }
+      }
+    }, 3000)
+  }
+
+  /**
+   * 停止自动重连
+   */
+  const stopAutoReconnect = () => {
+    if (reconnectTimer) {
+      clearInterval(reconnectTimer)
+      reconnectTimer = null
+    }
+    reconnecting.value = false
+    reconnectTargetName.value = ''
+  }
+
+  /**
    * 添加日志
    */
-  const addLog = (direction, data, type = 'ascii', rawBytes = null) => {
+  const addLog = (direction, data, type = 'utf8', rawBytes = null) => {
     const now = new Date()
     const time = now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0')
     
@@ -316,7 +507,7 @@ export const useSerialStore = defineStore('serial', () => {
         const encoder = new TextEncoder()
         rawBytes = encoder.encode(data + (options.appendCR ? '\r' : '') + (options.appendLF ? '\n' : ''))
       }
-      addLog('tx', data, options.isHex ? 'hex' : 'ascii', rawBytes)
+      addLog('tx', data, options.isHex ? 'hex' : 'utf8', rawBytes)
     }
     
     return success
@@ -368,9 +559,24 @@ export const useSerialStore = defineStore('serial', () => {
     serialManager.setProtocol({
       type: config.type || 'line',
       delimiter: config.endMark || '\n',
-      length: config.length || 0
+      length: config.length || 0,
+      waitForLF: config.waitForLF !== undefined ? config.waitForLF : protocol.value.waitForLF,
+      filterEmptyLines: config.filterEmptyLines !== undefined ? config.filterEmptyLines : protocol.value.filterEmptyLines
     })
   }
+  
+  // 监听协议配置变化，同步到 serialManager
+  watch(() => [protocol.value.waitForLF, protocol.value.filterEmptyLines], () => {
+    if (connected.value) {
+      serialManager.setProtocol({
+        type: protocol.value.type,
+        delimiter: protocol.value.endMark || '\n',
+        length: protocol.value.length || 0,
+        waitForLF: protocol.value.waitForLF,
+        filterEmptyLines: protocol.value.filterEmptyLines
+      })
+    }
+  })
 
   // ===== 控件管理 =====
   
@@ -430,15 +636,41 @@ export const useSerialStore = defineStore('serial', () => {
     }
   }
 
-  // 初始化时刷新端口列表
+  /**
+   * 启动端口列表自动刷新
+   */
+  const startPortsRefresh = () => {
+    if (portsRefreshInterval) return
+
+    // 每2秒刷新一次端口列表
+    portsRefreshInterval = setInterval(() => {
+      refreshPorts()
+    }, 2000)
+  }
+
+  /**
+   * 停止端口列表自动刷新
+   */
+  const stopPortsRefresh = () => {
+    if (portsRefreshInterval) {
+      clearInterval(portsRefreshInterval)
+      portsRefreshInterval = null
+    }
+  }
+
+  // 初始化
   if (isSupported.value) {
     refreshPorts()
+    startPortsRefresh() // 启动自动刷新
   }
 
   return {
     // 状态
     connected,
     connecting,
+    reconnecting,
+    reconnectTargetName,
+    autoReconnect,
     selectedPort,
     selectedPortName,
     baudRate,
@@ -477,6 +709,7 @@ export const useSerialStore = defineStore('serial', () => {
     updateWidget,
     formatBytes,
     addChannel,
-    removeChannel
+    removeChannel,
+    stopAutoReconnect
   }
 })

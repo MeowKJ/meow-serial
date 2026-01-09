@@ -22,6 +22,10 @@ class SerialManager {
     this.onConnect = null        // 连接成功回调
     this.onDisconnect = null     // 断开连接回调
     this.onError = null          // 错误回调
+    this.onDeviceChange = null   // 设备插入/拔出回调
+
+    // 设置设备变化监听
+    this._setupDeviceListeners()
     
     // 配置
     this.config = {
@@ -37,7 +41,9 @@ class SerialManager {
       type: 'line',        // 'line' | 'length' | 'delimiter' | 'raw'
       delimiter: '\n',     // 行结束符
       length: 0,           // 固定长度
-      timeout: 100         // 超时时间(ms)
+      timeout: 100,         // 超时时间(ms)
+      waitForLF: false,    // 等待LF才输出（默认关闭，保持原生实时输出）
+      filterEmptyLines: false // 过滤空行（默认关闭）
     }
     
     // 统计信息
@@ -54,6 +60,29 @@ class SerialManager {
     this.isSupported = 'serial' in navigator
   }
   
+  /**
+   * 设置设备变化监听
+   */
+  _setupDeviceListeners() {
+    if (!this.isSupported) return
+
+    const self = this
+
+    // 监听设备连接事件
+    navigator.serial.addEventListener('connect', (event) => {
+      if (self.onDeviceChange) {
+        self.onDeviceChange({ type: 'connect', port: event.target })
+      }
+    })
+
+    // 监听设备断开事件（全局，不只是当前连接的端口）
+    navigator.serial.addEventListener('disconnect', (event) => {
+      if (self.onDeviceChange) {
+        self.onDeviceChange({ type: 'disconnect', port: event.target })
+      }
+    })
+  }
+
   /**
    * 检查浏览器是否支持 Web Serial API
    */
@@ -148,14 +177,26 @@ class SerialManager {
    */
   async connect(portOrInfo, config = {}) {
     if (!this.checkSupport()) return false
-    
+
     // 合并配置
     this.config = { ...this.config, ...config }
-    
+
     try {
       // 获取端口对象
       this.port = portOrInfo.port || portOrInfo
-      
+
+      // 检查端口是否有效
+      if (!this.port) {
+        throw new Error('端口无效，请重新选择设备')
+      }
+
+      // 无论如何都先尝试关闭端口，确保端口处于关闭状态
+      try {
+        await this.port.close()
+      } catch (e) {
+        // 忽略关闭时的错误（端口可能本来就是关闭的）
+      }
+
       // 打开串口
       await this.port.open({
         baudRate: this.config.baudRate,
@@ -164,29 +205,37 @@ class SerialManager {
         parity: this.config.parity,
         flowControl: this.config.flowControl
       })
-      
+
       this.isConnected = true
       this.stats.startTime = Date.now()
       this.stats.bytesReceived = 0
       this.stats.bytesSent = 0
-      
+
       // 开始读取数据
       this.startReading()
-      
+
       // 监听断开事件
       navigator.serial.addEventListener('disconnect', this.handleDisconnect.bind(this))
-      
+
       if (this.onConnect) {
         this.onConnect({
           port: this.port,
           config: this.config
         })
       }
-      
+
       return true
     } catch (error) {
       this.isConnected = false
-      if (this.onError) this.onError(error)
+      this.port = null // 清理无效端口引用
+      // 提供更友好的错误信息
+      let friendlyError = error
+      if (error.name === 'InvalidStateError') {
+        friendlyError = new Error('端口状态异常，请重新选择设备')
+      } else if (error.name === 'NetworkError') {
+        friendlyError = new Error('设备已断开，请重新插入并选择设备')
+      }
+      if (this.onError) this.onError(friendlyError)
       return false
     }
   }
@@ -237,7 +286,13 @@ class SerialManager {
     if (event.target === this.port) {
       this.isConnected = false
       this.isReading = false
-      
+
+      // 清理端口引用，因为设备已断开，旧的引用不再有效
+      this.port = null
+      this.reader = null
+      this.writer = null
+      this.buffer = new Uint8Array(0)
+
       if (this.onDisconnect) {
         this.onDisconnect({ reason: 'device' })
       }
@@ -301,8 +356,20 @@ class SerialManager {
         break
         
       case 'line':
-        // 行模式：按换行符分割
-        this.processLineData(data)
+        // 行模式：根据 waitForLF 选项决定行为
+        if (this.protocol.waitForLF) {
+          // 等待LF才输出
+          this.processLineData(data)
+        } else {
+          // 实时输出，不等待LF
+          if (this.onData) {
+            this.onData({
+              raw: data,
+              text: new TextDecoder().decode(data),
+              timestamp: Date.now()
+            })
+          }
+        }
         break
         
       case 'delimiter':
@@ -316,7 +383,18 @@ class SerialManager {
         break
         
       default:
-        this.processLineData(data)
+        // 默认行为：根据 waitForLF 决定
+        if (this.protocol.waitForLF) {
+          this.processLineData(data)
+        } else {
+          if (this.onData) {
+            this.onData({
+              raw: data,
+              text: new TextDecoder().decode(data),
+              timestamp: Date.now()
+            })
+          }
+        }
     }
   }
   
@@ -337,17 +415,27 @@ class SerialManager {
     
     // 处理完整的行
     for (let i = 0; i < lines.length - 1; i++) {
-      const line = lines[i].trim()
-      if (line) {
-        this.stats.packetsReceived++
-        if (this.onData) {
-          this.onData({
-            raw: new TextEncoder().encode(line),
-            text: line,
-            timestamp: Date.now(),
-            parsed: this.parseLine(line)
-          })
+      let line = lines[i]
+      
+      // 根据 filterEmptyLines 选项决定是否过滤空行
+      if (this.protocol.filterEmptyLines) {
+        line = line.trim()
+        if (!line) {
+          // 跳过空行
+          continue
         }
+      }
+      
+      this.stats.packetsReceived++
+      if (this.onData) {
+        // 如果过滤了空行，使用trim后的line；否则使用原始line
+        const processedLine = this.protocol.filterEmptyLines ? line : lines[i]
+        this.onData({
+          raw: new TextEncoder().encode(processedLine),
+          text: processedLine,
+          timestamp: Date.now(),
+          parsed: this.parseLine(processedLine)
+        })
       }
     }
     

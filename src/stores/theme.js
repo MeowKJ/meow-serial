@@ -99,10 +99,10 @@ const themes = {
       },
       dark: {
         // 主色调 - 深色模式黑白灰
-        primary: '#CCCCCC',    // 浅灰
-        secondary: '#999999',  // 中灰
-        accent: '#666666',     // 深灰
-        warm: '#4D4D4D',       // 更深灰
+        primary: '#E0E0E0',    // 浅灰（提高亮度）
+        secondary: '#B0B0B0',  // 中灰
+        accent: '#A0A0A0',     // 浅灰（提高对比度）
+        warm: '#606060',       // 更深灰
         
         // 背景色系 - VSCode经典深色方案
         bg: '#1E1E1E',        // VSCode主背景

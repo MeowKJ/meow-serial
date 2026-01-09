@@ -80,14 +80,14 @@ const takeScreenshot = () => {
           @ {{ store.baudRate }}
         </span>
       </div>
-
+      
       <!-- 数据速率 -->
       <div class="text-cat-muted" v-if="store.connected">
         <span class="text-green-400">↓{{ (store.rxRate / 1000).toFixed(1) }}K/s</span>
         <span class="mx-1">|</span>
         <span class="text-blue-400">↑{{ (store.txRate / 1000).toFixed(1) }}K/s</span>
       </div>
-
+      
       <!-- 浏览器兼容提示 -->
       <div v-if="!store.isSupported" class="flex items-center gap-1 text-yellow-400">
         <span>⚠️</span>

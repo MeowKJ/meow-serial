@@ -118,18 +118,28 @@ export const bytesToHex = (bytes, separator = ' ') => {
     .join(separator)
 }
 
-// ASCII转HEX
-export const asciiToHex = (ascii) => {
-  return ascii.split('')
-    .map(c => c.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase())
+// UTF-8文本转HEX
+export const textToHex = (text) => {
+  const encoder = new TextEncoder()
+  const bytes = encoder.encode(text)
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0').toUpperCase())
     .join(' ')
 }
 
-// HEX转ASCII
-export const hexToAscii = (hex) => {
+// HEX转UTF-8文本
+export const hexToText = (hex) => {
   const bytes = hexToBytes(hex)
-  return String.fromCharCode(...bytes)
+  const decoder = new TextDecoder('utf-8', { fatal: false })
+  return decoder.decode(bytes)
 }
+
+// 向后兼容：保留旧函数名（已废弃，建议使用 textToHex 和 hexToText）
+/** @deprecated 使用 textToHex 代替 */
+export const asciiToHex = textToHex
+
+/** @deprecated 使用 hexToText 代替 */
+export const hexToAscii = hexToText
 
 // 校验和计算
 export const calculateChecksum = (bytes, type = 'sum') => {
