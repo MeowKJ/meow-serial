@@ -6,6 +6,154 @@ import TimelineBar from './terminal/TimelineBar.vue'
 
 const store = useSerialStore()
 
+// 统计数据计算
+const sysCount = computed(() =>
+  store.terminalLogs.filter(log => log.dir === 'system').length
+)
+const errCount = computed(() =>
+  store.terminalLogs.filter(log => log.dir === 'error').length
+)
+const txCount = computed(() =>
+  store.terminalLogs.filter(log => log.dir === 'tx').length
+)
+const rxCount = computed(() =>
+  store.terminalLogs.filter(log => log.dir === 'rx').length
+)
+
+// 获取消息类型对应的颜色
+const getLogColor = (dir) => {
+  switch (dir) {
+    case 'system': return '#a855f7' // purple-500
+    case 'error': return '#ef4444' // red-500
+    case 'tx': return '#3b82f6' // blue-500
+    case 'rx': return '#22c55e' // green-500
+    default: return '#6b7280' // gray-500
+  }
+}
+
+// 生成进度条的消息颜色序列（按实际消息顺序）
+const progressSegments = computed(() => {
+  const logs = store.terminalLogs
+  if (logs.length === 0) return []
+
+  // 将消息分组，相邻相同类型的合并
+  const segments = []
+  let currentDir = null
+  let currentCount = 0
+
+  for (const log of logs) {
+    if (log.dir === currentDir) {
+      currentCount++
+    } else {
+      if (currentDir !== null) {
+        segments.push({ dir: currentDir, count: currentCount })
+      }
+      currentDir = log.dir
+      currentCount = 1
+    }
+  }
+  if (currentDir !== null) {
+    segments.push({ dir: currentDir, count: currentCount })
+  }
+
+  // 计算每段的宽度百分比
+  const total = logs.length
+  return segments.map(seg => ({
+    dir: seg.dir,
+    width: (seg.count / total) * 100,
+    color: getLogColor(seg.dir)
+  }))
+})
+
+// 视窗位置和大小 (百分比)
+const viewportStart = ref(0)
+const viewportSize = ref(100)
+const isDragging = ref(false)
+const progressBarEl = ref(null)
+
+// 计算视窗在进度条上的位置和大小
+const updateViewport = () => {
+  if (!terminalEl.value) return
+  const { scrollTop, scrollHeight, clientHeight } = terminalEl.value
+
+  if (scrollHeight <= clientHeight) {
+    viewportStart.value = 0
+    viewportSize.value = 100
+  } else {
+    viewportSize.value = (clientHeight / scrollHeight) * 100
+    viewportStart.value = (scrollTop / scrollHeight) * 100
+  }
+}
+
+// 拖动视窗框开始
+const startDrag = (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  isDragging.value = true
+  autoScroll.value = false
+
+  const startX = e.touches ? e.touches[0].clientX : e.clientX
+  const startViewport = viewportStart.value
+  const rect = progressBarEl.value.getBoundingClientRect()
+  const barWidth = rect.width
+
+  const onMove = (moveEvent) => {
+    moveEvent.preventDefault()
+    const clientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX
+    const deltaX = clientX - startX
+    const deltaPercent = (deltaX / barWidth) * 100
+
+    let newStart = startViewport + deltaPercent
+    // 限制范围
+    newStart = Math.max(0, Math.min(100 - viewportSize.value, newStart))
+    viewportStart.value = newStart
+
+    // 直接设置滚动位置，不触发额外计算
+    if (terminalEl.value) {
+      const { scrollHeight } = terminalEl.value
+      terminalEl.value.scrollTop = (newStart / 100) * scrollHeight
+    }
+  }
+
+  const onEnd = () => {
+    // 延迟重置 isDragging，避免 scroll 事件立即覆盖
+    setTimeout(() => {
+      isDragging.value = false
+    }, 50)
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onEnd)
+    document.removeEventListener('touchmove', onMove)
+    document.removeEventListener('touchend', onEnd)
+  }
+
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onEnd)
+  document.addEventListener('touchmove', onMove)
+  document.addEventListener('touchend', onEnd)
+}
+
+// 点击进度条跳转（点击位置成为视窗中心）
+const handleProgressClick = (e) => {
+  if (isDragging.value) return
+  const rect = e.currentTarget.getBoundingClientRect()
+  let clickPercent = ((e.clientX - rect.left) / rect.width) * 100
+
+  // 让点击位置成为视窗中心
+  let newStart = clickPercent - viewportSize.value / 2
+  newStart = Math.max(0, Math.min(100 - viewportSize.value, newStart))
+
+  viewportStart.value = newStart
+  autoScroll.value = false
+  scrollToViewport(newStart)
+}
+
+// 根据视窗位置滚动终端
+const scrollToViewport = (startPercent) => {
+  if (!terminalEl.value) return
+  const { scrollHeight } = terminalEl.value
+  terminalEl.value.scrollTop = (startPercent / 100) * scrollHeight
+}
+
 const sendInput = ref('')
 const displayMode = ref('UTF-8')
 const showTimestamp = ref(true)
@@ -815,6 +963,9 @@ watch(() => store.terminalLogs.length, async () => {
     terminalEl.value.scrollTop = terminalEl.value.scrollHeight
     updateScrollInfo()
   }
+  // 更新视窗大小
+  await nextTick()
+  updateViewport()
 })
 
 // 过滤器变化时更新滚动信息
@@ -822,6 +973,12 @@ watch(dataFilter, async () => {
   await nextTick()
   updateScrollInfo()
 })
+
+// 监听终端滚动，同步视窗位置
+const handleTerminalScroll = () => {
+  if (isDragging.value) return
+  updateViewport()
+}
 
 // 监听显示模式切换
 watch(displayMode, async (newMode, oldMode) => {
@@ -936,7 +1093,8 @@ watch(terminalEl, (el) => {
     </div>
 
     <!-- 终端显示 -->
-    <div ref="terminalEl" class="flex-1 bg-cat-surface rounded-xl p-4 overflow-auto font-mono text-sm">
+    <div ref="terminalEl" class="flex-1 bg-cat-surface rounded-xl p-4 overflow-auto font-mono text-sm"
+         @scroll="handleTerminalScroll">
       <div v-for="log in filteredTerminalLogs" :key="log.id"
         :data-log-id="log.id"
         class="flex items-start gap-3 py-0.5 hover:bg-cat-border/30 px-2 -mx-2 rounded log-item">
@@ -1056,6 +1214,53 @@ watch(terminalEl, (el) => {
       @scroll-to="handleTimelineScroll"
       @navigate-to-log="handleNavigateToLog"
     />
+
+    <!-- 状态栏 - 横向消息地图进度条 -->
+    <div class="bg-cat-surface rounded-lg px-3 py-2">
+      <div class="flex items-center gap-3">
+        <!-- 消息地图进度条 -->
+        <div ref="progressBarEl"
+             class="flex-1 h-4 bg-cat-dark rounded-full overflow-hidden flex cursor-pointer relative"
+             @click="handleProgressClick">
+          <!-- 按实际消息顺序渲染颜色段 -->
+          <template v-if="progressSegments.length > 0">
+            <div v-for="(seg, idx) in progressSegments"
+                 :key="idx"
+                 class="h-full transition-all duration-150"
+                 :style="{ width: seg.width + '%', backgroundColor: seg.color }">
+            </div>
+          </template>
+          <!-- 空状态 -->
+          <div v-else class="w-full h-full bg-cat-border/30"></div>
+          <!-- 视窗框 -->
+          <div class="absolute top-0 h-full bg-white/20 border-2 border-white/60 rounded cursor-ew-resize"
+               :class="{ 'transition-none': isDragging }"
+               :style="{ left: viewportStart + '%', width: Math.max(viewportSize, 2) + '%' }"
+               @mousedown="startDrag"
+               @touchstart="startDrag">
+          </div>
+        </div>
+        <!-- 图例和统计 -->
+        <div class="flex items-center gap-3 text-[10px] font-mono shrink-0">
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-sm bg-purple-500"></span>
+            <span class="text-purple-400">{{ sysCount }}</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-sm bg-red-500"></span>
+            <span class="text-red-400">{{ errCount }}</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-sm bg-blue-500"></span>
+            <span class="text-blue-400">{{ txCount }}</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-sm bg-green-500"></span>
+            <span class="text-green-400">{{ rxCount }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 发送区 -->
     <div class="bg-cat-surface rounded-xl p-4">
