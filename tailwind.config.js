@@ -18,6 +18,9 @@ export default {
           'border': 'var(--cat-border)',
           'text': 'var(--cat-text)',
           'muted': 'var(--cat-muted)',
+          'terminal-text': 'var(--cat-terminal-text)',
+          'terminal-accent': 'var(--cat-terminal-accent)',
+          'terminal-accent-bg': 'var(--cat-terminal-accent-bg)',
         }
       },
       fontFamily: {

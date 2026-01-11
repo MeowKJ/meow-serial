@@ -137,7 +137,7 @@ const setFilter = (filterType) => {
 
 // 统计数据
 const stats = computed(() => {
-  const logs = filteredLogs.value
+  const logs = props.logs
   const txCount = logs.filter(l => l.dir === 'tx').length
   const rxCount = logs.filter(l => l.dir === 'rx').length
   return { tx: txCount, rx: rxCount, total: logs.length }

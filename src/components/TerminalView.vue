@@ -2,7 +2,6 @@
 import { ref, watch, nextTick, onUnmounted, onMounted, computed } from 'vue'
 import { useSerialStore } from '../stores/serial'
 import { notify } from '../utils/notification'
-import TimelineBar from './terminal/TimelineBar.vue'
 
 const store = useSerialStore()
 
@@ -639,6 +638,156 @@ const handleHexByteMouseLeave = () => {
   }
 }
 
+// 同步高亮 - 记录悬停的字节范围
+const hoveredByteRange = ref({ start: null, end: null })
+
+// 通用字节悬停处理（用于HEX和混合模式）
+const handleByteHover = (event, log, index) => {
+  hoveredLogId.value = log.id
+  hoveredHexIndex.value = index
+  // 计算字符组范围
+  const bytes = getHexBytes(log)
+  const groupInfo = getCharGroupInfo(bytes, index)
+  hoveredByteRange.value = { start: groupInfo.start, end: groupInfo.start + groupInfo.length - 1 }
+
+  // 计算tooltip位置（防止超出终端边界）
+  if (!terminalEl.value || !event) return
+
+  const tooltipKey = `${log.id}-${index}`
+  const triggerRect = event.currentTarget.getBoundingClientRect()
+  const containerRect = terminalEl.value.getBoundingClientRect()
+
+  // 估算tooltip尺寸
+  const estimatedTooltipHeight = 130
+  const estimatedTooltipWidth = 200
+
+  // 计算垂直方向：优先显示在上方，空间不足时显示在下方
+  const spaceAbove = triggerRect.top - containerRect.top
+  const spaceBelow = containerRect.bottom - triggerRect.bottom
+
+  if (spaceAbove >= estimatedTooltipHeight + 10) {
+    hexTooltipDirection.value[tooltipKey] = 'top'
+  } else if (spaceBelow >= estimatedTooltipHeight + 10) {
+    hexTooltipDirection.value[tooltipKey] = 'bottom'
+  } else {
+    // 两边都不够，选择空间更大的一边
+    hexTooltipDirection.value[tooltipKey] = spaceAbove > spaceBelow ? 'top' : 'bottom'
+  }
+
+  // 计算水平位置
+  const triggerCenterX = triggerRect.left + triggerRect.width / 2
+  const containerLeft = containerRect.left + 8
+  const containerRight = containerRect.right - 8
+
+  // 计算tooltip左右边缘
+  const tooltipLeft = triggerCenterX - estimatedTooltipWidth / 2
+  const tooltipRight = triggerCenterX + estimatedTooltipWidth / 2
+
+  if (tooltipLeft < containerLeft) {
+    // 左侧空间不足
+    hexTooltipPosition.value[tooltipKey] = { align: 'left', offset: Math.max(8, triggerRect.left - containerLeft) }
+  } else if (tooltipRight > containerRight) {
+    // 右侧空间不足
+    hexTooltipPosition.value[tooltipKey] = { align: 'right', offset: Math.max(8, containerRight - triggerRect.right) }
+  } else {
+    hexTooltipPosition.value[tooltipKey] = { align: 'center' }
+  }
+}
+
+// UTF-8字符悬停处理（混合模式中UTF-8行）
+const handleCharHover = (log, byteStart, byteEnd) => {
+  hoveredLogId.value = log.id
+  hoveredHexIndex.value = byteStart
+  hoveredByteRange.value = { start: byteStart, end: byteEnd }
+}
+
+// 悬停离开
+const handleByteLeave = () => {
+  hoveredHexIndex.value = null
+  hoveredLogId.value = null
+  hoveredByteRange.value = { start: null, end: null }
+}
+
+// 获取UTF-8字符数组（用于混合模式）
+const getUtf8Chars = (log) => {
+  const bytes = getHexBytes(log)
+  if (bytes.length === 0) return []
+
+  const chars = []
+  let i = 0
+  while (i < bytes.length) {
+    const charInfo = getUtf8CharInfo(bytes, i)
+    const charBytes = bytes.slice(charInfo.start, charInfo.start + charInfo.length)
+
+    let display = ''
+    try {
+      const decoder = new TextDecoder('utf-8', { fatal: false })
+      display = decoder.decode(new Uint8Array(charBytes))
+      // 替换不可打印字符
+      if (display.charCodeAt(0) < 32 || (display.charCodeAt(0) >= 127 && display.charCodeAt(0) < 160)) {
+        display = '.'
+      }
+    } catch (e) {
+      display = '.'
+    }
+
+    chars.push({
+      display,
+      byteStart: charInfo.start,
+      byteEnd: charInfo.start + charInfo.length - 1,
+      byteCount: charInfo.length
+    })
+
+    i = charInfo.start + charInfo.length
+  }
+  return chars
+}
+
+// 混合模式HEX字节样式类
+const getMixedByteClass = (log, index, type) => {
+  const isHovered = hoveredLogId.value === log.id &&
+    hoveredByteRange.value.start !== null &&
+    index >= hoveredByteRange.value.start &&
+    index <= hoveredByteRange.value.end
+
+  let baseClass = 'inline-block transition-all cursor-pointer'
+  if (isHovered) {
+    return baseClass + ' hex-byte-highlight text-cat-terminal-accent font-bold rounded'
+  }
+  return baseClass + ' text-cat-terminal-accent'
+}
+
+// 混合模式UTF-8字符样式类
+const getMixedCharClass = (log, char) => {
+  const isHovered = hoveredLogId.value === log.id &&
+    hoveredByteRange.value.start !== null &&
+    char.byteStart <= hoveredByteRange.value.end &&
+    char.byteEnd >= hoveredByteRange.value.start
+
+  let baseClass = 'inline-block transition-all cursor-pointer'
+  // 根据字节数调整宽度，保持对齐
+  const width = char.byteCount * 1.5 // 每个字节约1.5em宽度（包含间距）
+  if (isHovered) {
+    return baseClass + ' hex-byte-highlight text-cat-terminal-accent font-bold rounded'
+  }
+  return baseClass + ' text-cat-terminal-text'
+}
+
+// 混合模式UTF-8文本（简单显示，不需要同步高亮）
+const getMixedUtf8Text = (log) => {
+  const bytes = getHexBytes(log)
+  if (bytes.length === 0) return ''
+
+  try {
+    const decoder = new TextDecoder('utf-8', { fatal: false })
+    let text = decoder.decode(new Uint8Array(bytes))
+    // 替换不可打印字符为点
+    return text.replace(/[\x00-\x1F\x7F-\x9F]/g, '.')
+  } catch (e) {
+    return Array.from(bytes).map(b => (b >= 32 && b <= 126) ? String.fromCharCode(b) : '.').join('')
+  }
+}
+
 // 获取悬停字节的UTF-8信息
 const getHoveredUtf8Info = (log, index) => {
   if (!log || index === undefined) return null
@@ -766,11 +915,11 @@ const getFullSentenceHex = (log) => {
 
 // 获取字节的样式类（用于字符组背景色）
 const getByteClass = (log, index) => {
-  if (!log || index === undefined) return 'text-cat-accent hover:bg-cat-surface/50'
+  if (!log || index === undefined) return 'text-cat-terminal-accent hover:bg-cat-surface/50'
 
   // 如果翻译功能被禁用，只返回基础样式
   if (!enableHexHoverTranslation.value) {
-    return 'inline-block px-1.5 py-0.5 transition-all cursor-help relative group text-cat-accent hover:bg-cat-surface/50 rounded'
+    return 'inline-block mr-1.5 transition-all cursor-help relative group text-cat-terminal-accent hover:bg-cat-surface/50 rounded'
   }
 
   const bytes = getHexBytes(log)
@@ -778,49 +927,40 @@ const getByteClass = (log, index) => {
   const isInGroup = index >= groupInfo.start && index < groupInfo.start + groupInfo.length
   const isHovered = hoveredHexIndex.value === index && hoveredLogId.value === log.id
 
-  // 检查当前字节是否在悬停字节所属的字符组内
-  // 需要获取悬停字节所属的字符组信息，然后检查当前字节是否在这个组内
-  let isGroupHovered = false
-  let hoveredGroupInfo = null
-  if (hoveredLogId.value === log.id && hoveredHexIndex.value !== null) {
-    hoveredGroupInfo = getCharGroupInfo(bytes, hoveredHexIndex.value)
-    // 如果当前字节在悬停字节所属的字符组内，则高亮
-    isGroupHovered = index >= hoveredGroupInfo.start && index < hoveredGroupInfo.start + hoveredGroupInfo.length
-  }
+  // 使用hoveredByteRange检查是否在高亮范围内（支持同步高亮）
+  const isInHighlightRange = hoveredLogId.value === log.id &&
+    hoveredByteRange.value.start !== null &&
+    index >= hoveredByteRange.value.start &&
+    index <= hoveredByteRange.value.end
 
-  // 判断是否是字符组的第一个或最后一个字节（用于圆角处理）
-  // 如果当前字节在悬停的字符组内，使用悬停组的边界来判断圆角
-  let isFirstInGroup = index === groupInfo.start
-  let isLastInGroup = index === groupInfo.start + groupInfo.length - 1
+  // 判断圆角位置
+  let isFirstInHighlight = index === hoveredByteRange.value.start
+  let isLastInHighlight = index === hoveredByteRange.value.end
 
-  // 如果当前字节在悬停的字符组内，使用悬停组的边界
-  if (isGroupHovered && hoveredGroupInfo) {
-    isFirstInGroup = index === hoveredGroupInfo.start
-    isLastInGroup = index === hoveredGroupInfo.start + hoveredGroupInfo.length - 1
-  }
+  let baseClass = 'inline-block mr-1.5 transition-all cursor-help relative group'
 
-  let baseClass = 'inline-block px-1.5 py-0.5 transition-all cursor-help relative group'
-
-  // 添加圆角类，只在字符组的首尾添加圆角
-  if (isFirstInGroup && isLastInGroup) {
-    baseClass += ' rounded'
-  } else if (isFirstInGroup) {
-    baseClass += ' rounded-l'
-  } else if (isLastInGroup) {
-    baseClass += ' rounded-r'
+  // 添加圆角类
+  if (isInHighlightRange) {
+    if (isFirstInHighlight && isLastInHighlight) {
+      baseClass += ' rounded'
+    } else if (isFirstInHighlight) {
+      baseClass += ' rounded-l'
+    } else if (isLastInHighlight) {
+      baseClass += ' rounded-r'
+    } else {
+      baseClass += ' rounded-none'
+    }
   } else {
-    baseClass += ' rounded-none'
+    baseClass += ' rounded'
   }
 
-  if (isHovered) {
-    return baseClass + ' bg-cat-primary/50 text-cat-primary font-bold shadow-md'
-  } else if (isGroupHovered) {
-    return baseClass + ' bg-cat-primary/40 text-cat-primary font-semibold'
+  if (isInHighlightRange) {
+    return baseClass + ' hex-byte-highlight text-cat-terminal-accent font-bold'
   } else if (groupInfo.isMultiByte && isInGroup) {
     // 多字节字符组使用不同的背景色，确保连接在一起
-    return baseClass + ' bg-cat-accent/15 text-cat-accent'
+    return baseClass + ' bg-cat-surface/30 text-cat-terminal-accent'
   }
-  return baseClass + ' text-cat-accent hover:bg-cat-surface/50'
+  return baseClass + ' text-cat-terminal-accent hover:bg-cat-surface/50'
 }
 
 // 检查是否在底部
@@ -870,15 +1010,19 @@ const getHexTooltipArrowClass = (log, index, arrowIndex) => {
   }
 }
 
-// 获取HEX tooltip箭头样式（3种固定位置：左、中、右）
+// 获取HEX tooltip箭头样式（动态计算位置，始终指向触发元素）
 const getHexTooltipArrowStyle = (log, index) => {
   const tooltipKey = `${log.id}-${index}`
   const position = hexTooltipPosition.value[tooltipKey] || { align: 'center' }
 
   if (position.align === 'left') {
-    return { left: '16px', transform: 'translateX(-50%)' }
+    // tooltip靠左，箭头在左侧，根据offset调整
+    const offset = position.offset || 12
+    return { left: `${offset}px`, transform: 'translateX(-50%)' }
   } else if (position.align === 'right') {
-    return { right: '16px', transform: 'translateX(50%)' }
+    // tooltip靠右，箭头在右侧，根据offset调整
+    const offset = position.offset || 12
+    return { right: `${offset}px`, transform: 'translateX(50%)' }
   } else {
     return { left: '50%', transform: 'translateX(-50%)' }
   }
@@ -1108,18 +1252,18 @@ watch(terminalEl, (el) => {
             class="absolute left-0 z-50 pointer-events-auto dir-tooltip" :class="getDirTooltipPositionClass(log.id)"
             style="min-width: 300px; max-width: 500px;" @click.stop>
             <div class="bg-cat-card border border-cat-border rounded-lg shadow-xl p-3">
-              <div class="flex items-center justify-between mb-1.5">
-                <div class="text-xs text-cat-muted font-medium">
-                  {{ displayMode === 'HEX' ? '完整UTF-8翻译:' : '完整HEX源码:' }}
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-xs text-cat-muted">
+                  字节数: <span class="text-cat-terminal-accent font-bold">{{ getHexBytes(log).length }}</span>
                 </div>
                 <button @click.stop="clickedDirLabel = null"
                   class="text-cat-muted hover:text-cat-text text-xs">✕</button>
               </div>
-              <div class="text-sm font-mono text-cat-text break-words bg-cat-surface/50 p-2 rounded">
-                {{ displayMode === 'HEX' ? (getFullSentenceUtf8(log) || '(空)') : (getFullSentenceHex(log) || '(空)') }}
+              <div class="text-xs text-cat-muted font-medium mb-1">
+                {{ displayMode === 'HEX' ? '完整UTF-8翻译:' : '完整HEX源码:' }}
               </div>
-              <div class="text-xs text-cat-muted mt-2 pt-2 border-t border-cat-border">
-                字节数: {{ getHexBytes(log).length }}
+              <div class="text-sm font-mono text-cat-terminal-text break-words bg-cat-surface/50 p-2 rounded">
+                {{ displayMode === 'HEX' ? (getFullSentenceUtf8(log) || '(空)') : (getFullSentenceHex(log) || '(空)') }}
               </div>
             </div>
             <!-- 小箭头 -->
@@ -1127,11 +1271,11 @@ watch(terminalEl, (el) => {
             <div :class="getDirTooltipArrowClass(log.id, 1)"></div>
           </div>
         </span>
-        <span class="break-all font-mono" :class="log.type === 'hex' ? 'text-cat-accent' : 'text-cat-text'">
+        <span class="break-all font-mono text-cat-terminal-text">
           <!-- HEX模式：每个字节可悬停，UTF-8字符组用背景色划分 -->
           <template v-if="displayMode === 'HEX'">
             <template v-for="(byte, index) in getHexBytes(log)" :key="index">
-              <span @mouseenter="handleHexByteMouseEnter($event, log, index)" @mouseleave="handleHexByteMouseLeave()"
+              <span @mouseenter="handleByteHover($event, log, index)" @mouseleave="handleByteLeave()"
                 :class="getByteClass(log, index)">
                 {{ byte.toString(16).padStart(2, '0').toUpperCase() }}
                 <!-- UTF-8提示框（优化版，防止超出视口导致闪烁） -->
@@ -1146,7 +1290,7 @@ watch(terminalEl, (el) => {
                       <!-- HEX字节显示 -->
                       <div class="flex items-center gap-2">
                         <span class="text-xs text-cat-muted font-medium">HEX:</span>
-                        <span class="text-base font-mono font-bold text-cat-text bg-cat-primary/30 px-2 py-0.5 rounded">
+                        <span class="text-base font-mono font-bold text-cat-terminal-accent">
                           {{ getCharGroupFullInfo(log, index)?.hexBytes }}
                         </span>
                       </div>
@@ -1154,7 +1298,7 @@ watch(terminalEl, (el) => {
                       <!-- UTF-8字符显示 -->
                       <div class="flex items-center gap-2">
                         <span class="text-xs text-cat-muted font-medium">UTF-8:</span>
-                        <span class="text-base font-bold text-cat-text bg-cat-primary/30 px-2 py-0.5 rounded">
+                        <span class="text-base font-bold text-cat-terminal-accent">
                           {{ getCharGroupFullInfo(log, index)?.utf8Char }}
                         </span>
                       </div>
@@ -1162,11 +1306,11 @@ watch(terminalEl, (el) => {
                       <!-- Unicode信息 -->
                       <div class="text-xs">
                         <span class="text-cat-muted">Unicode:</span>
-                        <span class="ml-1 font-mono font-bold text-cat-accent">
+                        <span class="ml-1 font-mono font-bold text-cat-terminal-accent">
                           {{ getCharGroupFullInfo(log, index)?.unicode }}
                         </span>
                         <span v-if="getCharGroupFullInfo(log, index)?.isMultiByte"
-                          class="ml-2 text-cat-accent text-[10px]">
+                          class="ml-2 text-cat-terminal-accent text-[10px]">
                           ({{ getCharGroupFullInfo(log, index)?.byteCount }}字节)
                         </span>
                       </div>
@@ -1187,10 +1331,27 @@ watch(terminalEl, (el) => {
               <!-- 移除字节之间的间距，让背景色连接在一起 -->
             </template>
           </template>
-          <!-- 其他模式：正常显示 -->
+          <!-- 混合模式：HEX和UTF-8分行显示，同步高亮 -->
+          <template v-else-if="displayMode === '混合'">
+            <div class="flex flex-col gap-1">
+              <!-- HEX行 -->
+              <div class="flex flex-wrap gap-1.5">
+                <template v-for="(byte, index) in getHexBytes(log)" :key="'hex-'+index">
+                  <span @mouseenter="handleByteHover($event, log, index)" @mouseleave="handleByteLeave()"
+                    :class="getMixedByteClass(log, index, 'hex')">
+                    {{ byte.toString(16).padStart(2, '0').toUpperCase() }}
+                  </span>
+                </template>
+              </div>
+              <!-- UTF-8行 -->
+              <div class="text-cat-muted whitespace-pre-wrap">
+                {{ getMixedUtf8Text(log) }}
+              </div>
+            </div>
+          </template>
+          <!-- UTF-8模式：正常显示 -->
           <template v-else>
-            <span v-if="displayMode === 'UTF-8'" class="whitespace-pre-wrap">{{ formatData(log) }}</span>
-            <span v-else>{{ formatData(log) }}</span>
+            <span class="whitespace-pre-wrap">{{ formatData(log) }}</span>
           </template>
         </span>
       </div>
@@ -1202,18 +1363,6 @@ watch(terminalEl, (el) => {
         </div>
       </div>
     </div>
-
-    <!-- 时间轴导航条 -->
-    <TimelineBar
-      :logs="store.terminalLogs"
-      :scroll-position="scrollPosition"
-      :scroll-height="scrollHeight"
-      :client-height="clientHeight"
-      :filter="dataFilter"
-      @update:filter="dataFilter = $event"
-      @scroll-to="handleTimelineScroll"
-      @navigate-to-log="handleNavigateToLog"
-    />
 
     <!-- 状态栏 - 横向消息地图进度条 -->
     <div class="bg-cat-surface rounded-lg px-3 py-2">
@@ -1227,7 +1376,7 @@ watch(terminalEl, (el) => {
             <div v-for="(seg, idx) in progressSegments"
                  :key="idx"
                  class="h-full transition-all duration-150"
-                 :style="{ width: seg.width + '%', backgroundColor: seg.color }">
+                 :style="{ width: seg.width + '%', backgroundColor: seg.color, opacity: dataFilter === 'all' || dataFilter === seg.dir ? 1 : 0.2 }">
             </div>
           </template>
           <!-- 空状态 -->
@@ -1240,21 +1389,34 @@ watch(terminalEl, (el) => {
                @touchstart="startDrag">
           </div>
         </div>
-        <!-- 图例和统计 -->
-        <div class="flex items-center gap-3 text-[10px] font-mono shrink-0">
-          <div class="flex items-center gap-1">
+        <!-- 图例和统计（可点击筛选） -->
+        <div class="flex items-center gap-2 text-[10px] font-mono shrink-0">
+          <div @click="dataFilter = dataFilter === 'all' ? 'all' : 'all'"
+               class="flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+               :class="dataFilter === 'all' ? 'bg-cat-border' : 'hover:bg-cat-border/50'">
+            <span class="text-cat-muted">全部</span>
+          </div>
+          <div @click="dataFilter = dataFilter === 'system' ? 'all' : 'system'"
+               class="flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+               :class="dataFilter === 'system' ? 'bg-purple-500/30 ring-1 ring-purple-500' : 'hover:bg-cat-border/50'">
             <span class="w-2 h-2 rounded-sm bg-purple-500"></span>
             <span class="text-purple-400">{{ sysCount }}</span>
           </div>
-          <div class="flex items-center gap-1">
+          <div @click="dataFilter = dataFilter === 'error' ? 'all' : 'error'"
+               class="flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+               :class="dataFilter === 'error' ? 'bg-red-500/30 ring-1 ring-red-500' : 'hover:bg-cat-border/50'">
             <span class="w-2 h-2 rounded-sm bg-red-500"></span>
             <span class="text-red-400">{{ errCount }}</span>
           </div>
-          <div class="flex items-center gap-1">
+          <div @click="dataFilter = dataFilter === 'tx' ? 'all' : 'tx'"
+               class="flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+               :class="dataFilter === 'tx' ? 'bg-blue-500/30 ring-1 ring-blue-500' : 'hover:bg-cat-border/50'">
             <span class="w-2 h-2 rounded-sm bg-blue-500"></span>
             <span class="text-blue-400">{{ txCount }}</span>
           </div>
-          <div class="flex items-center gap-1">
+          <div @click="dataFilter = dataFilter === 'rx' ? 'all' : 'rx'"
+               class="flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+               :class="dataFilter === 'rx' ? 'bg-green-500/30 ring-1 ring-green-500' : 'hover:bg-cat-border/50'">
             <span class="w-2 h-2 rounded-sm bg-green-500"></span>
             <span class="text-green-400">{{ rxCount }}</span>
           </div>
@@ -1330,5 +1492,10 @@ watch(terminalEl, (el) => {
   100% {
     background-color: transparent;
   }
+}
+
+/* 终端中悬浮HEX字节的强调背景色 */
+.hex-byte-highlight {
+  background-color: var(--cat-terminal-accent-bg);
 }
 </style>

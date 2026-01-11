@@ -19,7 +19,7 @@ const themes = {
         secondary: '#38BDF8',  // 亮蓝色
         accent: '#BAE6FD',     // 淡蓝色
         warm: '#E0F2FE',       // 极淡蓝
-        
+
         // 背景色系
         bg: '#F8FAFC',        // 极浅灰蓝
         card: '#FFFFFF',      // 纯白
@@ -28,10 +28,15 @@ const themes = {
         text: '#0F172A',      // 深灰蓝文字
         muted: '#64748B',     // 中灰蓝
         dark: '#F8FAFC',      // 同bg
-        
+
+        // 终端专用颜色
+        terminalText: '#0F172A',      // 终端文字颜色
+        terminalAccent: '#0EA5E9',    // 终端强调色（HEX字节等）
+        terminalAccentBg: '#BAE6FD',  // 终端强调背景色
+
         // 通道颜色（可爱风格 - 蓝色系，高对比度，丰富色彩）
         channelColors: ['#0EA5E9', '#06B6D4', '#3B82F6', '#2563EB', '#1D4ED8', '#6366F1', '#8B5CF6', '#0891B2'],
-        
+
         // 控件特殊颜色
         success: '#10B981',   // 绿色
         warning: '#F59E0B',   // 橙色
@@ -42,9 +47,9 @@ const themes = {
         // 主色调 - 深色模式保持蓝色但更深
         primary: '#0EA5E9',    // 亮蓝色
         secondary: '#0284C7',  // 深蓝色
-        accent: '#38BDF8',     // 天蓝色
+        accent: '#FBBF24',     // 琥珀黄（强调色，与蓝色形成对比）
         warm: '#7DD3FC',       // 浅蓝色
-        
+
         // 背景色系
         bg: '#0F172A',        // 深灰蓝
         card: '#1E293B',      // 深蓝灰
@@ -53,10 +58,15 @@ const themes = {
         text: '#F1F5F9',      // 浅灰蓝文字
         muted: '#94A3B8',     // 中灰蓝
         dark: '#0F172A',      // 同bg
-        
+
+        // 终端专用颜色
+        terminalText: '#E2E8F0',      // 终端文字颜色
+        terminalAccent: '#FBBF24',    // 终端强调色（琥珀黄）
+        terminalAccentBg: '#78350F',  // 终端强调背景色（深琥珀）
+
         // 通道颜色（深色模式 - 蓝色系，高对比度，丰富色彩）
         channelColors: ['#60A5FA', '#38BDF8', '#3B82F6', '#2563EB', '#1D4ED8', '#22D3EE', '#06B6D4', '#0891B2'],
-        
+
         // 控件特殊颜色
         success: '#10B981',
         warning: '#F59E0B',
@@ -78,7 +88,7 @@ const themes = {
         secondary: '#64748B',  // 中灰
         accent: '#94A3B8',     // 浅灰
         warm: '#E2E8F0',       // 极浅灰
-        
+
         // 背景色系
         bg: '#FFFFFF',        // 纯白
         card: '#F8FAFC',      // 极浅灰
@@ -87,10 +97,15 @@ const themes = {
         text: '#0F172A',      // 深灰文字
         muted: '#64748B',     // 中灰
         dark: '#FFFFFF',      // 同bg
-        
+
+        // 终端专用颜色
+        terminalText: '#1E293B',      // 终端文字颜色
+        terminalAccent: '#475569',    // 终端强调色（深灰）
+        terminalAccentBg: '#E2E8F0',  // 终端强调背景色
+
         // 通道颜色（黑白灰系 - 低饱和度蓝灰/紫灰色调，保持主题但提高辨识度）
         channelColors: ['#2D3748', '#4A5568', '#718096', '#A0AEC0', '#CBD5E0', '#5A6C7D', '#7C8FA1', '#B8C5D1'],
-        
+
         // 控件特殊颜色
         success: '#059669',   // 深绿
         warning: '#D97706',   // 深橙
@@ -103,7 +118,7 @@ const themes = {
         secondary: '#B0B0B0',  // 中灰
         accent: '#A0A0A0',     // 浅灰（提高对比度）
         warm: '#606060',       // 更深灰
-        
+
         // 背景色系 - VSCode经典深色方案
         bg: '#1E1E1E',        // VSCode主背景
         card: '#252526',      // VSCode侧边栏背景
@@ -112,10 +127,15 @@ const themes = {
         text: '#CCCCCC',      // VSCode主文字
         muted: '#858585',     // VSCode次要文字
         dark: '#1E1E1E',      // 同bg
-        
+
+        // 终端专用颜色
+        terminalText: '#D4D4D4',      // 终端文字颜色
+        terminalAccent: '#9CDCFE',    // 终端强调色（VSCode蓝）
+        terminalAccentBg: '#264F78',  // 终端强调背景色
+
         // 通道颜色（深色模式黑白灰 - 低饱和度色彩，保持主题但提高辨识度）
         channelColors: ['#E2E8F0', '#CBD5E1', '#94A3B8', '#64748B', '#475569', '#A0AEC0', '#718096', '#4A5568'],
-        
+
         // 控件特殊颜色
         success: '#10B981',
         warning: '#F59E0B',
@@ -137,7 +157,7 @@ const themes = {
         secondary: '#C44569',  // 深粉
         accent: '#FFB6C1',     // 浅粉
         warm: '#FFE5E5',       // 极浅粉
-        
+
         // 背景色系 - 土气风格
         bg: '#FFF8E1',        // 米黄色
         card: '#FFFFFF',      // 白色
@@ -146,10 +166,15 @@ const themes = {
         text: '#5D4037',      // 棕色文字
         muted: '#8D6E63',     // 中棕
         dark: '#FFF8E1',      // 同bg
-        
+
+        // 终端专用颜色
+        terminalText: '#5D4037',      // 终端文字颜色（棕色）
+        terminalAccent: '#FF6B9D',    // 终端强调色（粉红）
+        terminalAccentBg: '#FFE5E5',  // 终端强调背景色
+
         // 通道颜色（花里胡哨）
         channelColors: ['#FF6B9D', '#FF8C42', '#FFD93D', '#6BCB77', '#4D96FF', '#9B59B6', '#E74C3C', '#F39C12'],
-        
+
         // 控件特殊颜色（鲜艳）
         success: '#27AE60',   // 鲜绿
         warning: '#F39C12',   // 鲜橙
@@ -162,7 +187,7 @@ const themes = {
         secondary: '#C44569',  // 深粉
         accent: '#FF8C42',     // 橙色
         warm: '#FFD93D',       // 黄色
-        
+
         // 背景色系 - 深色土气
         bg: '#2C1810',        // 深棕
         card: '#3E2723',      // 深棕灰
@@ -171,10 +196,15 @@ const themes = {
         text: '#FFE5E5',      // 浅粉文字
         muted: '#BCAAA4',     // 中棕灰
         dark: '#2C1810',      // 同bg
-        
+
+        // 终端专用颜色
+        terminalText: '#FFE5E5',      // 终端文字颜色
+        terminalAccent: '#FFD93D',    // 终端强调色（黄色）
+        terminalAccentBg: '#78350F',  // 终端强调背景色
+
         // 通道颜色（深色模式花里胡哨）
         channelColors: ['#FF6B9D', '#FF8C42', '#FFD93D', '#6BCB77', '#4D96FF', '#9B59B6', '#E74C3C', '#F39C12'],
-        
+
         // 控件特殊颜色
         success: '#27AE60',
         warning: '#F39C12',
@@ -240,13 +270,13 @@ export const useThemeStore = defineStore('theme', () => {
   const applyTheme = () => {
     const root = document.documentElement
     const themeColors = colors.value
-    
+
     // 设置主色调CSS变量
     root.style.setProperty('--cat-primary', themeColors.primary)
     root.style.setProperty('--cat-secondary', themeColors.secondary)
     root.style.setProperty('--cat-accent', themeColors.accent)
     root.style.setProperty('--cat-warm', themeColors.warm)
-    
+
     // 设置背景和文本颜色（从主题配置读取）
     root.style.setProperty('--cat-bg', themeColors.bg)
     root.style.setProperty('--cat-card', themeColors.card)
@@ -255,13 +285,18 @@ export const useThemeStore = defineStore('theme', () => {
     root.style.setProperty('--cat-text', themeColors.text)
     root.style.setProperty('--cat-muted', themeColors.muted)
     root.style.setProperty('--cat-dark', themeColors.dark)
-    
+
+    // 设置终端专用颜色
+    root.style.setProperty('--cat-terminal-text', themeColors.terminalText)
+    root.style.setProperty('--cat-terminal-accent', themeColors.terminalAccent)
+    root.style.setProperty('--cat-terminal-accent-bg', themeColors.terminalAccentBg)
+
     // 设置特殊颜色
     root.style.setProperty('--cat-success', themeColors.success)
     root.style.setProperty('--cat-warning', themeColors.warning)
     root.style.setProperty('--cat-error', themeColors.error)
     root.style.setProperty('--cat-info', themeColors.info)
-    
+
     // 设置body类
     document.body.classList.toggle('dark', isDark.value)
     document.body.classList.toggle('light', !isDark.value)
