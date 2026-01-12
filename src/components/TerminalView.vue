@@ -2,8 +2,12 @@
 import { ref, watch, nextTick, onUnmounted, onMounted, computed } from 'vue'
 import { useSerialStore } from '../stores/serial'
 import { notify } from '../utils/notification'
+import BaseConverter from './terminal/BaseConverter.vue'
 
 const store = useSerialStore()
+
+// 工具面板显示状态
+const showTools = ref(false)
 
 // 统计数据计算
 const sysCount = computed(() =>
@@ -713,6 +717,19 @@ const getUtf8Chars = (log) => {
   const bytes = getHexBytes(log)
   if (bytes.length === 0) return []
 
+  // 特殊字符映射表
+  const specialChars = {
+    0x00: '\\0',   // NULL
+    0x07: '\\a',   // Bell
+    0x08: '\\b',   // Backspace
+    0x09: '\\t',   // Tab
+    0x0A: '\\n',   // LF
+    0x0B: '\\v',   // Vertical Tab
+    0x0C: '\\f',   // Form Feed
+    0x0D: '\\r',   // CR
+    0x1B: '\\e',   // Escape
+  }
+
   const chars = []
   let i = 0
   while (i < bytes.length) {
@@ -720,15 +737,33 @@ const getUtf8Chars = (log) => {
     const charBytes = bytes.slice(charInfo.start, charInfo.start + charInfo.length)
 
     let display = ''
-    try {
-      const decoder = new TextDecoder('utf-8', { fatal: false })
-      display = decoder.decode(new Uint8Array(charBytes))
-      // 替换不可打印字符
-      if (display.charCodeAt(0) < 32 || (display.charCodeAt(0) >= 127 && display.charCodeAt(0) < 160)) {
+
+    // 单字节时检查特殊字符
+    if (charBytes.length === 1) {
+      const byte = charBytes[0]
+      if (specialChars[byte] !== undefined) {
+        display = specialChars[byte]
+      } else if (byte >= 32 && byte <= 126) {
+        // 可打印ASCII
+        display = String.fromCharCode(byte)
+      } else if (byte < 32 || (byte >= 127 && byte < 160)) {
+        // 其他控制字符用十六进制表示
+        display = '\\x' + byte.toString(16).padStart(2, '0').toUpperCase()
+      } else {
         display = '.'
       }
-    } catch (e) {
-      display = '.'
+    } else {
+      // 多字节UTF-8字符
+      try {
+        const decoder = new TextDecoder('utf-8', { fatal: false })
+        display = decoder.decode(new Uint8Array(charBytes))
+        // 检查解码结果是否有效
+        if (!display || display.charCodeAt(0) < 32) {
+          display = '.'
+        }
+      } catch (e) {
+        display = '.'
+      }
     }
 
     chars.push({
@@ -764,13 +799,11 @@ const getMixedCharClass = (log, char) => {
     char.byteStart <= hoveredByteRange.value.end &&
     char.byteEnd >= hoveredByteRange.value.start
 
-  let baseClass = 'inline-block transition-all cursor-pointer'
-  // 根据字节数调整宽度，保持对齐
-  const width = char.byteCount * 1.5 // 每个字节约1.5em宽度（包含间距）
+  let baseClass = 'inline transition-all cursor-pointer'
   if (isHovered) {
-    return baseClass + ' hex-byte-highlight text-cat-terminal-accent font-bold rounded'
+    return baseClass + ' hex-byte-highlight text-cat-terminal-accent font-bold rounded px-0.5'
   }
-  return baseClass + ' text-cat-terminal-text'
+  return baseClass + ' text-cat-muted'
 }
 
 // 混合模式UTF-8文本（简单显示，不需要同步高亮）
@@ -1230,10 +1263,22 @@ watch(terminalEl, (el) => {
         <input type="checkbox" v-model="enableHexHoverTranslation" class="accent-cat-primary"> HEX翻译
       </label>
       <div class="ml-auto flex gap-2">
+        <button @click="showTools = !showTools"
+          :class="[
+            'cat-btn-secondary px-3 py-1.5 rounded-lg text-sm transition-colors',
+            showTools ? 'bg-cat-primary/20 border-cat-primary text-cat-primary' : ''
+          ]">
+          🔧 工具
+        </button>
         <button @click="clearTerminal" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-sm">
           🗑️ 清空
         </button>
       </div>
+    </div>
+
+    <!-- 工具面板 -->
+    <div v-if="showTools" class="flex gap-4 flex-wrap">
+      <BaseConverter class="w-72" />
     </div>
 
     <!-- 终端显示 -->
@@ -1343,9 +1388,13 @@ watch(terminalEl, (el) => {
                   </span>
                 </template>
               </div>
-              <!-- UTF-8行 -->
-              <div class="text-cat-muted whitespace-pre-wrap">
-                {{ getMixedUtf8Text(log) }}
+              <!-- UTF-8行（同步高亮） -->
+              <div>
+                <template v-for="(char, idx) in getUtf8Chars(log)" :key="'char-'+idx">
+                  <span @mouseenter="handleCharHover(log, char.byteStart, char.byteEnd)"
+                        @mouseleave="handleByteLeave()"
+                        :class="getMixedCharClass(log, char)">{{ char.display }}</span>
+                </template>
               </div>
             </div>
           </template>
