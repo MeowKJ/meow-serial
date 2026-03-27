@@ -17,14 +17,16 @@ const channel = computed(() => {
 
 // 当前值
 const currentValue = computed(() => {
-  return channel.value?.value || 0
+  const value = channel.value?.value
+  return Number.isFinite(value) ? value : Number.NaN
 })
 
 // 计算百分比
 const percentage = computed(() => {
   const min = props.widget.min || 0
   const max = props.widget.max || 100
-  const value = Math.min(Math.max(currentValue.value, min), max)
+  const rawValue = Number.isFinite(currentValue.value) ? currentValue.value : min
+  const value = Math.min(Math.max(rawValue, min), max)
   return ((value - min) / (max - min)) * 100
 })
 
@@ -98,8 +100,8 @@ const borderColor = computed(() => {
     <!-- 数值显示 -->
     <div class="text-center -mt-2">
       <div class="text-xl font-bold" :style="{ color: channel?.color }">
-        {{ currentValue.toFixed(1) }}
-        <span class="text-sm opacity-60">{{ widget.unit || '' }}</span>
+        {{ Number.isFinite(currentValue) ? currentValue.toFixed(1) : '--' }}
+        <span v-if="Number.isFinite(currentValue)" class="text-sm opacity-60">{{ widget.unit || '' }}</span>
       </div>
       <div class="text-xs text-cat-muted">{{ channel?.name || '通道' }}</div>
     </div>

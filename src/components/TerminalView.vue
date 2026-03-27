@@ -261,6 +261,10 @@ const quickCommands = [
   { name: 'LED关', cmd: 'LED OFF' }
 ]
 
+const shouldSendViaRadarCli = computed(() =>
+  store.protocol.type === 'mmwave' && store.radarCliConnected
+)
+
 // 发送数据
 const sendData = async () => {
   if (!sendInput.value.trim()) return
@@ -292,7 +296,8 @@ const sendData = async () => {
   historyIndex.value = -1
 
   // 发送
-  await store.send(data, {
+  const sendFn = shouldSendViaRadarCli.value ? store.sendRadarCli : store.send
+  await sendFn(data, {
     appendCR: sendAsHex.value ? false : appendCR.value,
     appendLF: sendAsHex.value ? false : appendLF.value,
     isHex: sendAsHex.value
@@ -1189,8 +1194,10 @@ watch(displayMode, async (newMode, oldMode) => {
 watch(timerEnabled, (enabled) => {
   if (enabled && sendInput.value) {
     timerHandle = setInterval(async () => {
-      if (sendInput.value && store.connected) {
-        await store.send(sendInput.value, {
+      const canSend = shouldSendViaRadarCli.value ? store.radarCliConnected : store.connected
+      if (sendInput.value && canSend) {
+        const sendFn = shouldSendViaRadarCli.value ? store.sendRadarCli : store.send
+        await sendFn(sendInput.value, {
           appendCR: appendCR.value,
           appendLF: appendLF.value,
           isHex: sendAsHex.value
@@ -1478,17 +1485,21 @@ watch(terminalEl, (el) => {
       <div class="flex gap-3">
         <div class="flex-1 relative">
           <input v-model="sendInput" @keyup.enter="sendData" @keydown="handleKeyDown" @input="handleHexInput"
-            :disabled="!store.connected"
-            :placeholder="sendAsHex ? '输入HEX数据，如: 01 02 FF (空格可选)' : (store.connected ? '输入要发送的数据... (↑↓ 历史)' : '请先连接串口...')"
+            :disabled="shouldSendViaRadarCli ? !store.radarCliConnected : !store.connected"
+            :placeholder="sendAsHex
+              ? '输入HEX数据，如: 01 02 FF (空格可选)'
+              : (shouldSendViaRadarCli
+                ? '当前将发送到雷达 CLI... (↑↓ 历史)'
+                : (store.connected ? '输入要发送的数据... (↑↓ 历史)' : '请先连接串口...'))"
             class="w-full bg-cat-dark border border-cat-border rounded-lg px-4 py-2.5 pr-20 disabled:opacity-50"
             :class="{ 'font-mono text-cat-accent': sendAsHex }">
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-cat-muted">
             {{ sendInput.length }} 字符
           </span>
         </div>
-        <button @click="sendData" :disabled="!store.connected || !sendInput.trim()"
+        <button @click="sendData" :disabled="(shouldSendViaRadarCli ? !store.radarCliConnected : !store.connected) || !sendInput.trim()"
           class="cat-btn px-6 py-2.5 rounded-lg font-medium text-white disabled:opacity-50">
-          发送喵 🐾
+          {{ shouldSendViaRadarCli ? '发到 CLI 🐾' : '发送喵 🐾' }}
         </button>
       </div>
 

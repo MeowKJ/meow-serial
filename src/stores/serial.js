@@ -1,14 +1,36 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { serialManager } from '../utils/serialManager'
+import { serialManager, SerialManager } from '../utils/serialManager'
+import {
+  getLayoutList,
+  loadConnectionConfig,
+  loadLayout,
+  loadProtocolConfig,
+  loadWorkspace,
+  saveConnectionConfig,
+  saveLayout,
+  saveProtocolConfig,
+  saveWorkspace
+} from '../utils/storage'
 import { useThemeStore } from './theme'
 
 export const useSerialStore = defineStore('serial', () => {
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+  const radarCliManager = new SerialManager()
+  const heldValueWindowMs = 3000
+  const heldChannelNames = new Set(['BPM', '置信度'])
+  const heldChannelState = new Map()
+  let persistenceReady = false
+
   // ===== 连接状态 =====
   const connected = ref(false)
   const connecting = ref(false)
   const selectedPort = ref(null)
   const selectedPortName = ref('')
+  const radarCliPort = ref(null)
+  const radarCliPortName = ref('')
+  const radarCliConnected = ref(false)
+  const radarCliConnecting = ref(false)
   const baudRate = ref(115200)
   const dataBits = ref(8)
   const stopBits = ref(1)
@@ -77,9 +99,19 @@ export const useSerialStore = defineStore('serial', () => {
     updateChannelColors()
   }, 100)
 
+  const savedConnectionConfig = loadConnectionConfig()
+  if (savedConnectionConfig) {
+    baudRate.value = savedConnectionConfig.baudRate ?? baudRate.value
+    dataBits.value = savedConnectionConfig.dataBits ?? dataBits.value
+    stopBits.value = savedConnectionConfig.stopBits ?? stopBits.value
+    parity.value = savedConnectionConfig.parity ?? parity.value
+  }
+
   // ===== 数据历史 =====
   const dataHistory = ref([])
+  const temperatureHistory = ref([])
   const maxHistoryLength = 500
+  const temperatureHistoryMaxLength = 20000
 
   // ===== 终端日志 =====
   const terminalLogs = ref([])
@@ -91,41 +123,277 @@ export const useSerialStore = defineStore('serial', () => {
     separator: ',',
     endMark: '\n',
     customParser: '',
+    radarCfgDelayMs: 80,
     waitForLF: false,        // 等待LF才输出（默认关闭，保持原生实时输出）
     filterEmptyLines: false // 过滤空行（默认关闭）
   })
 
+  const savedProtocolConfig = loadProtocolConfig()
+  if (savedProtocolConfig) {
+    protocol.value = { ...protocol.value, ...savedProtocolConfig }
+  }
+
   // ===== 控件 =====
   const widgets = ref([])
   let widgetIdCounter = 1
+  let lastMmwaveLoggedFrame = -1
+
+  const normalizeWidgets = (items = []) => {
+    return items.map((widget, index) => ({
+      ...widget,
+      id: typeof widget.id === 'number' ? widget.id : index + 1
+    }))
+  }
+
+  const normalizeChannels = (items = []) => {
+    const channelColors = themeStore.getChannelColors()
+
+    return items.map((channel, index) => ({
+      id: typeof channel.id === 'number' ? channel.id : index,
+      name: channel.name || `通道${index + 1}`,
+      color: channel.color || channelColors[index % channelColors.length] || '#7DD3FC',
+      enabled: channel.enabled !== false,
+      value: Number.isFinite(channel.value) ? channel.value : 0
+    }))
+  }
+
+  const getWorkspaceSnapshot = () => ({
+    widgets: widgets.value,
+    channels: channels.value,
+    protocol: protocol.value
+  })
+
+  const applyWorkspaceSnapshot = (snapshot) => {
+    if (!snapshot) return false
+
+    if (Array.isArray(snapshot.channels) && snapshot.channels.length > 0) {
+      channels.value = normalizeChannels(snapshot.channels)
+    }
+
+    if (snapshot.protocol && typeof snapshot.protocol === 'object') {
+      protocol.value = { ...protocol.value, ...snapshot.protocol }
+      serialManager.setProtocol({
+        type: protocol.value.type || 'line',
+        delimiter: protocol.value.endMark || '\n',
+        length: protocol.value.length || 0,
+        waitForLF: protocol.value.waitForLF,
+        filterEmptyLines: protocol.value.filterEmptyLines
+      })
+    }
+
+    if (Array.isArray(snapshot.widgets)) {
+      widgets.value = normalizeWidgets(snapshot.widgets)
+      widgetIdCounter = Math.max(1, ...widgets.value.map(widget => widget.id || 0)) + 1
+    }
+
+    return true
+  }
+
+  const saveWorkspaceState = () => {
+    if (!persistenceReady) return false
+    return saveWorkspace(getWorkspaceSnapshot())
+  }
+
+  const loadWorkspaceState = () => {
+    const snapshot = loadWorkspace()
+    if (!snapshot) return false
+    return applyWorkspaceSnapshot(snapshot)
+  }
+
+  const saveNamedLayout = (name) => {
+    if (!name) return false
+    return saveLayout(name, getWorkspaceSnapshot())
+  }
+
+  const loadNamedLayout = (name) => {
+    if (!name) return false
+    const snapshot = loadLayout(name)
+    if (!snapshot) return false
+    return applyWorkspaceSnapshot(snapshot)
+  }
+
+  const listSavedLayouts = () => getLayoutList()
+
+  const ensureChannelCount = (count, labels = []) => {
+    const channelColors = themeStore.getChannelColors()
+
+    while (channels.value.length < count) {
+      const newId = channels.value.length
+      channels.value.push({
+        id: newId,
+        name: labels[newId] || `通道${newId + 1}`,
+        color: channelColors[newId % channelColors.length] || channelColors[0] || '#7DD3FC',
+        enabled: true,
+        value: 0
+      })
+    }
+  }
+
+  const pushHistorySnapshot = (timestamp) => {
+    const historyEntry = {
+      time: timestamp,
+      values: channels.value.map(ch => ch.value)
+    }
+
+    dataHistory.value.push(historyEntry)
+    if (dataHistory.value.length > maxHistoryLength) {
+      dataHistory.value.shift()
+    }
+  }
+
+  const applyParsedValues = (values, labels = [], timestamp = Date.now()) => {
+    if (!Array.isArray(values) || values.length === 0) return
+
+    ensureChannelCount(values.length, labels)
+
+    channels.value.forEach((channel, index) => {
+      const nextLabel = labels[index]
+      if (nextLabel) {
+        channel.name = nextLabel
+      } else if (index >= values.length) {
+        channel.name = `通道${index + 1}`
+      }
+
+      const holdKey = nextLabel || channel.name
+      const shouldHold = heldChannelNames.has(holdKey)
+      const hasIncomingValue = index < values.length
+      const incomingValue = hasIncomingValue ? values[index] : Number.NaN
+
+      if (index < values.length) {
+        if (shouldHold) {
+          if (Number.isFinite(incomingValue)) {
+            channel.value = incomingValue
+            heldChannelState.set(holdKey, {
+              value: incomingValue,
+              timestamp
+            })
+          } else {
+            const held = heldChannelState.get(holdKey)
+            if (held && (timestamp - held.timestamp) <= heldValueWindowMs) {
+              channel.value = held.value
+            } else {
+              channel.value = Number.NaN
+            }
+          }
+        } else {
+          channel.value = incomingValue
+        }
+      } else {
+        if (shouldHold) {
+          const held = heldChannelState.get(holdKey)
+          if (held && (timestamp - held.timestamp) <= heldValueWindowMs) {
+            channel.value = held.value
+          } else {
+            channel.value = Number.NaN
+          }
+        } else {
+          channel.value = 0
+        }
+      }
+    })
+
+    pushHistorySnapshot(timestamp)
+  }
+
+  const updateNamedChannelValue = (channelName, value, timestamp = Date.now()) => {
+    if (!channelName) return
+
+    const channel = channels.value.find(item => item.name === channelName)
+    if (!channel) return
+
+    channel.value = Number.isFinite(value) ? value : Number.NaN
+    if (channelName === '温度(°C)') {
+      recordTemperatureSample(value, timestamp)
+    }
+
+    pushHistorySnapshot(timestamp)
+  }
+
+  const recordTemperatureSample = (value, timestamp = Date.now()) => {
+    if (!Number.isFinite(value)) return
+
+    const lastPoint = temperatureHistory.value[temperatureHistory.value.length - 1]
+    if (!lastPoint || lastPoint.time !== timestamp || lastPoint.value !== value) {
+      temperatureHistory.value.push({
+        time: timestamp,
+        value
+      })
+
+      if (temperatureHistory.value.length > temperatureHistoryMaxLength) {
+        temperatureHistory.value.shift()
+      }
+    }
+  }
+
+  const parseRadarCliTemperature = (text) => {
+    if (typeof text !== 'string' || !text.includes('Temp:')) {
+      return null
+    }
+
+    const pmMatch = text.match(/pm\s+(-?\d+(?:\.\d+)?)\s*C/i)
+    if (pmMatch) {
+      return Number.parseFloat(pmMatch[1])
+    }
+
+    const digMatch = text.match(/dig\s+(-?\d+(?:\.\d+)?)/i)
+    if (digMatch) {
+      return Number.parseFloat(digMatch[1])
+    }
+
+    return null
+  }
+
+  const parseRadarConfigLines = (text) => {
+    return text
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#') && !line.startsWith('%'))
+  }
 
   // ===== 串口管理器回调 =====
   
   // 数据接收回调
   serialManager.onData = (data) => {
+    let logText = data.text
+    let logType = 'utf8'
+    let logRawBytes = data.raw
+    let shouldAddTerminalLog = true
+
+    if (data.parsed && data.parsed.type === 'mmwave') {
+      logText = `[Data] ${data.parsed.summary}`
+      logType = 'mmwave'
+      logRawBytes = null
+
+      const frameNumber = Number(data.parsed.header?.frameNumber ?? -1)
+      const isKeyFrame = frameNumber >= 0 && (frameNumber <= 3 || frameNumber % 10 === 0)
+
+      shouldAddTerminalLog = frameNumber < 0 || isKeyFrame
+      if (frameNumber === lastMmwaveLoggedFrame) {
+        shouldAddTerminalLog = false
+      }
+      if (shouldAddTerminalLog && frameNumber >= 0) {
+        lastMmwaveLoggedFrame = frameNumber
+      }
+    }
+
     // 添加到终端日志（包含原始字节数据用于HEX显示）
-    addLog('rx', data.text, 'utf8', data.raw)
+    if (shouldAddTerminalLog) {
+      addLog('rx', logText, logType, logRawBytes)
+    }
     
     // 解析数据并更新通道
     if (data.parsed && data.parsed.type === 'values') {
-      const values = data.parsed.data
-      
-      // 更新通道值
-      values.forEach((value, index) => {
-        if (index < channels.value.length) {
-          channels.value[index].value = value
-        }
-      })
-      
-      // 添加到历史记录
-      const historyEntry = {
-        time: data.timestamp,
-        values: channels.value.map(ch => ch.value)
+      applyParsedValues(data.parsed.data, [], data.timestamp)
+    } else if (data.parsed && data.parsed.type === 'mmwave') {
+      applyParsedValues(data.parsed.channelValues, data.parsed.channelLabels, data.timestamp)
+      if (data.parsed.temperature?.valid &&
+          Number.isFinite(data.parsed.temperature.pmTempC)) {
+        recordTemperatureSample(data.parsed.temperature.pmTempC, data.timestamp)
       }
-      
-      dataHistory.value.push(historyEntry)
-      if (dataHistory.value.length > maxHistoryLength) {
-        dataHistory.value.shift()
+      if (!data.parsed.breathSummary &&
+          data.parsed.temperature?.valid &&
+          Number.isFinite(data.parsed.temperature.pmTempC)) {
+        updateNamedChannelValue('温度(°C)', data.parsed.temperature.pmTempC, data.timestamp)
       }
     }
   }
@@ -305,6 +573,75 @@ export const useSerialStore = defineStore('serial', () => {
     }
     return false
   }
+
+  /**
+   * 请求选择雷达 CLI 串口
+   */
+  const requestRadarCliPort = async () => {
+    addLog('system', '正在请求雷达 CLI 串口授权...')
+    const result = await radarCliManager.requestPort()
+    if (result) {
+      radarCliPort.value = result.port
+      radarCliPortName.value = result.name
+      addLog('system', `已授权雷达 CLI 串口: ${result.name}`)
+      return true
+    }
+
+    addLog('system', '未选择雷达 CLI 串口')
+    return false
+  }
+
+  /**
+   * 连接雷达 CLI 串口
+   */
+  const connectRadarCli = async () => {
+    if (!radarCliPort.value) {
+      const selected = await requestRadarCliPort()
+      if (!selected) {
+        return false
+      }
+    }
+
+    radarCliConnecting.value = true
+    radarCliManager.setProtocol({
+      type: 'line',
+      delimiter: '\n',
+      length: 0,
+      waitForLF: true,
+      filterEmptyLines: false
+    })
+
+    const success = await radarCliManager.connect(radarCliPort.value, {
+      baudRate: 115200,
+      dataBits: 8,
+      stopBits: 1,
+      parity: 'none'
+    })
+
+    if (!success) {
+      radarCliConnecting.value = false
+    }
+
+    return success
+  }
+
+  /**
+   * 断开雷达 CLI 串口
+   */
+  const disconnectRadarCli = async () => {
+    radarCliConnecting.value = false
+    return await radarCliManager.disconnect()
+  }
+
+  /**
+   * 切换雷达 CLI 监听状态
+   */
+  const toggleRadarCli = async () => {
+    if (radarCliConnected.value) {
+      return await disconnectRadarCli()
+    }
+    return await connectRadarCli()
+  }
   
   /**
    * 连接串口
@@ -483,6 +820,32 @@ export const useSerialStore = defineStore('serial', () => {
     }
   }
 
+  radarCliManager.onError = (error) => {
+    radarCliConnecting.value = false
+    addLog('error', `雷达 CLI 错误: ${error.message}`)
+  }
+
+  radarCliManager.onData = (data) => {
+    addLog('rx', `[CLI] ${data.text}`, 'utf8', data.raw)
+
+    const temperature = parseRadarCliTemperature(data.text)
+    if (Number.isFinite(temperature)) {
+      updateNamedChannelValue('温度(°C)', temperature, data.timestamp || Date.now())
+    }
+  }
+
+  radarCliManager.onConnect = () => {
+    radarCliConnected.value = true
+    radarCliConnecting.value = false
+    addLog('system', `雷达 CLI 串口已连接: ${radarCliPortName.value}`)
+  }
+
+  radarCliManager.onDisconnect = () => {
+    radarCliConnected.value = false
+    radarCliConnecting.value = false
+    addLog('system', '雷达 CLI 串口已关闭')
+  }
+
   /**
    * 发送数据
    */
@@ -534,10 +897,103 @@ export const useSerialStore = defineStore('serial', () => {
   }
 
   /**
+   * 发送数据到雷达 CLI 串口
+   */
+  const sendRadarCli = async (data, options = {}) => {
+    if (!radarCliPort.value) {
+      addLog('error', '未授权雷达 CLI 串口')
+      return false
+    }
+
+    if (!radarCliConnected.value) {
+      const cliConnected = await connectRadarCli()
+      if (!cliConnected) {
+        addLog('error', '雷达 CLI 串口连接失败')
+        return false
+      }
+    }
+
+    const success = await radarCliManager.send(data, options)
+
+    if (success) {
+      let rawBytes = null
+      if (options.isHex) {
+        const hex = data.replace(/\s/g, '')
+        rawBytes = new Uint8Array(hex.length / 2)
+        for (let i = 0; i < rawBytes.length; i++) {
+          rawBytes[i] = parseInt(hex.substr(i * 2, 2), 16)
+        }
+      } else {
+        const encoder = new TextEncoder()
+        rawBytes = encoder.encode(data + (options.appendCR ? '\r' : '') + (options.appendLF ? '\n' : ''))
+      }
+      addLog('tx', `[CLI] ${data}`, options.isHex ? 'hex' : 'utf8', rawBytes)
+    }
+
+    return success
+  }
+
+  /**
+   * 按行发送雷达 cfg 文本
+   */
+  const sendRadarConfigText = async (text, options = {}) => {
+    const lines = parseRadarConfigLines(text)
+    const delayMs = Number.isFinite(options.delayMs)
+      ? options.delayMs
+      : protocol.value.radarCfgDelayMs
+
+    if (lines.length === 0) {
+      addLog('error', 'cfg 文件为空或只包含注释')
+      return false
+    }
+
+    addLog('system', `开始发送雷达 cfg，共 ${lines.length} 行，间隔 ${delayMs} ms`)
+
+    if (!radarCliPort.value) {
+      addLog('error', '双串口模式下发送 cfg 必须先授权专用雷达 CLI 串口')
+      return false
+    }
+
+    if (!radarCliConnected.value) {
+      const cliConnected = await connectRadarCli()
+      if (!cliConnected) {
+        addLog('error', '雷达 CLI 串口打开失败，请重新授权该端口')
+        radarCliPort.value = null
+        radarCliPortName.value = ''
+        return false
+      }
+    }
+
+    for (let index = 0; index < lines.length; index++) {
+      const line = lines[index]
+      const success = await radarCliManager.send(line, {
+        appendCR: true,
+        appendLF: true,
+        isHex: false
+      })
+
+      if (!success) {
+        addLog('error', `cfg 发送失败，停止在第 ${index + 1} 行: ${line}`)
+        return false
+      }
+
+      addLog('tx', `[CLI] ${line}`, 'utf8', new TextEncoder().encode(`${line}\r\n`))
+
+      if (delayMs > 0 && index < lines.length - 1) {
+        await sleep(delayMs)
+      }
+    }
+
+    addLog('system', `雷达 cfg 发送完成，CLI 串口保持监听: ${radarCliPortName.value}`)
+    return true
+  }
+
+  /**
    * 清空所有数据
    */
   const clearAll = () => {
     dataHistory.value = []
+    temperatureHistory.value = []
     terminalLogs.value = []
     serialManager.resetStats()
     totalRx.value = 0
@@ -557,9 +1013,9 @@ export const useSerialStore = defineStore('serial', () => {
   const setProtocol = (config) => {
     protocol.value = { ...protocol.value, ...config }
     serialManager.setProtocol({
-      type: config.type || 'line',
-      delimiter: config.endMark || '\n',
-      length: config.length || 0,
+      type: config.type || protocol.value.type || 'line',
+      delimiter: config.endMark !== undefined ? config.endMark : (protocol.value.endMark || '\n'),
+      length: config.length !== undefined ? config.length : (protocol.value.length || 0),
       waitForLF: config.waitForLF !== undefined ? config.waitForLF : protocol.value.waitForLF,
       filterEmptyLines: config.filterEmptyLines !== undefined ? config.filterEmptyLines : protocol.value.filterEmptyLines
     })
@@ -658,7 +1114,36 @@ export const useSerialStore = defineStore('serial', () => {
     }
   }
 
+  watch([baudRate, dataBits, stopBits, parity], () => {
+    if (!persistenceReady) return
+
+    saveConnectionConfig({
+      baudRate: baudRate.value,
+      dataBits: dataBits.value,
+      stopBits: stopBits.value,
+      parity: parity.value
+    })
+  })
+
+  watch(protocol, (nextProtocol) => {
+    if (!persistenceReady) return
+
+    saveProtocolConfig(nextProtocol)
+    saveWorkspaceState()
+  }, { deep: true })
+
+  watch(channels, () => {
+    saveWorkspaceState()
+  }, { deep: true })
+
+  watch(widgets, () => {
+    saveWorkspaceState()
+  }, { deep: true })
+
   // 初始化
+  loadWorkspaceState()
+  persistenceReady = true
+
   if (isSupported.value) {
     refreshPorts()
     startPortsRefresh() // 启动自动刷新
@@ -673,6 +1158,10 @@ export const useSerialStore = defineStore('serial', () => {
     autoReconnect,
     selectedPort,
     selectedPortName,
+    radarCliPort,
+    radarCliPortName,
+    radarCliConnected,
+    radarCliConnecting,
     baudRate,
     dataBits,
     stopBits,
@@ -687,6 +1176,7 @@ export const useSerialStore = defineStore('serial', () => {
     fps,
     channels,
     dataHistory,
+    temperatureHistory,
     terminalLogs,
     protocol,
     widgets,
@@ -694,12 +1184,18 @@ export const useSerialStore = defineStore('serial', () => {
     // 方法
     refreshPorts,
     requestPort,
+    requestRadarCliPort,
+    connectRadarCli,
+    disconnectRadarCli,
+    toggleRadarCli,
     connect,
     disconnect,
     toggleConnect,
     selectPort,
     send,
     sendBytes,
+    sendRadarCli,
+    sendRadarConfigText,
     addLog,
     clearAll,
     clearTerminal,
@@ -707,6 +1203,10 @@ export const useSerialStore = defineStore('serial', () => {
     addWidget,
     removeWidget,
     updateWidget,
+    saveWorkspaceState,
+    saveNamedLayout,
+    loadNamedLayout,
+    listSavedLayouts,
     formatBytes,
     addChannel,
     removeChannel,

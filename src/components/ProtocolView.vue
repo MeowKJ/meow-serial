@@ -1,6 +1,6 @@
 <script setup>
 // ProtocolView.vue
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useSerialStore } from '../stores/serial'
 
 const store = useSerialStore()
@@ -11,6 +11,7 @@ const protocols = [
   { id: 'firewater', name: 'FireWater', icon: '🔥', desc: 'CSV字符串协议' },
   { id: 'justfloat', name: 'JustFloat', icon: '🔢', desc: '二进制浮点协议' },
   { id: 'json', name: 'JSON', icon: '📋', desc: 'JSON格式' },
+  { id: 'mmwave', name: 'mmWave TLV', icon: '📡', desc: 'TI 雷达二进制数据包' },
   { id: 'custom', name: '自定义', icon: '✨', desc: '自定义解析' }
 ]
 
@@ -26,6 +27,42 @@ const testProtocol = () => {
     protocolTestResult.value = 'Error: ' + e.message
   }
 }
+
+const applyProtocol = (protocolId) => {
+  currentProtocol.value = protocolId
+
+  if (protocolId === 'mmwave') {
+    store.setProtocol({
+      type: 'mmwave',
+      waitForLF: false,
+      filterEmptyLines: false
+    })
+    return
+  }
+
+  if (protocolId === 'raw') {
+    store.setProtocol({
+      type: 'raw',
+      waitForLF: false,
+      filterEmptyLines: false
+    })
+    return
+  }
+
+  store.setProtocol({
+    type: 'line',
+    waitForLF: true,
+    filterEmptyLines: false
+  })
+}
+
+onMounted(() => {
+  if (store.protocol.type === 'mmwave') {
+    currentProtocol.value = 'mmwave'
+  } else if (store.protocol.type === 'raw') {
+    currentProtocol.value = 'raw'
+  }
+})
 </script>
 
 <template>
@@ -45,7 +82,7 @@ const testProtocol = () => {
         <button 
           v-for="p in protocols" 
           :key="p.id" 
-          @click="currentProtocol = p.id"
+          @click="applyProtocol(p.id)"
           :class="[
             'p-4 rounded-xl border text-left transition-all',
             currentProtocol === p.id 

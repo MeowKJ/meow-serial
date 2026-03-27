@@ -14,11 +14,43 @@ defineEmits(['toggle-recording', 'show-widget-panel'])
 // 保存布局
 const saveLayout = () => {
   const layoutName = prompt('请输入布局名称:', `布局_${Date.now()}`)
-  if (layoutName) {
-    // 实现保存逻辑
-    console.log('保存布局:', layoutName, store.widgets)
-    notify.success('布局已保存喵!')
+  if (layoutName?.trim()) {
+    const saved = store.saveNamedLayout(layoutName.trim())
+    if (saved) {
+      store.saveWorkspaceState()
+      notify.success(`布局已保存到本地: ${layoutName.trim()}`)
+      return
+    }
+
+    notify.error('布局保存失败')
   }
+}
+
+const loadLayout = () => {
+  const layouts = store.listSavedLayouts()
+
+  if (!layouts.length) {
+    notify.info('本地还没有可加载的布局')
+    return
+  }
+
+  const layoutList = layouts
+    .map((layout, index) => `${index + 1}. ${layout.name} (${layout.widgetCount} 个控件)`)
+    .join('\n')
+
+  const selected = prompt(`请输入要加载的布局名称:\n${layoutList}`, layouts[0].name)
+  if (!selected?.trim()) {
+    return
+  }
+
+  const loaded = store.loadNamedLayout(selected.trim())
+  if (loaded) {
+    store.saveWorkspaceState()
+    notify.success(`已加载本地布局: ${selected.trim()}`)
+    return
+  }
+
+  notify.error(`未找到布局: ${selected.trim()}`)
 }
 
 // 截图
@@ -49,7 +81,7 @@ const takeScreenshot = () => {
       <button @click="saveLayout" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
         <span>💾</span> 保存布局
       </button>
-      <button class="cat-btn-secondary px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
+      <button @click="loadLayout" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
         <span>📁</span> 加载布局
       </button>
       <div class="w-px h-6 bg-cat-border mx-2"></div>

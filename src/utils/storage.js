@@ -1,9 +1,12 @@
 /**
  * 本地存储工具模块
- * 用于保存和加载布局、配置等
+ * 用于保存和加载布局、工作区配置等
  */
 
 const STORAGE_PREFIX = 'meow_serial_'
+const WORKSPACE_KEY = 'workspace'
+
+const cloneJsonSafe = (value) => JSON.parse(JSON.stringify(value))
 
 // 保存数据到localStorage
 export const saveToStorage = (key, data) => {
@@ -34,35 +37,34 @@ export const removeFromStorage = (key) => {
   localStorage.removeItem(STORAGE_PREFIX + key)
 }
 
-// 保存布局配置
-export const saveLayout = (name, widgets) => {
+const serializeWidget = (widget) => ({
+  ...cloneJsonSafe(widget)
+})
+
+const serializeChannel = (channel) => ({
+  id: channel.id,
+  name: channel.name,
+  color: channel.color,
+  enabled: channel.enabled,
+  value: channel.value ?? 0
+})
+
+const serializeWorkspace = ({ widgets = [], channels = [], protocol = {}, canvas = {} }) => ({
+  widgets: widgets.map(serializeWidget),
+  channels: channels.map(serializeChannel),
+  protocol: cloneJsonSafe(protocol),
+  canvas: cloneJsonSafe(canvas),
+  savedAt: Date.now()
+})
+
+// 保存命名布局
+export const saveLayout = (name, workspace) => {
   const layouts = loadFromStorage('layouts', {})
-  layouts[name] = {
-    widgets: widgets.map(w => ({
-      type: w.type,
-      title: w.title,
-      x: w.x,
-      y: w.y,
-      w: w.w,
-      h: w.h,
-      channel: w.channel,
-      label: w.label,
-      command: w.command,
-      unit: w.unit,
-      min: w.min,
-      max: w.max,
-      precision: w.precision,
-      expression: w.expression,
-      condition: w.condition,
-      threshold: w.threshold,
-      action: w.action
-    })),
-    savedAt: Date.now()
-  }
+  layouts[name] = serializeWorkspace(workspace)
   return saveToStorage('layouts', layouts)
 }
 
-// 加载布局配置
+// 加载命名布局
 export const loadLayout = (name) => {
   const layouts = loadFromStorage('layouts', {})
   return layouts[name] || null
@@ -71,11 +73,13 @@ export const loadLayout = (name) => {
 // 获取所有布局列表
 export const getLayoutList = () => {
   const layouts = loadFromStorage('layouts', {})
-  return Object.entries(layouts).map(([name, data]) => ({
-    name,
-    widgetCount: data.widgets.length,
-    savedAt: new Date(data.savedAt).toLocaleString()
-  }))
+  return Object.entries(layouts)
+    .map(([name, data]) => ({
+      name,
+      widgetCount: Array.isArray(data.widgets) ? data.widgets.length : 0,
+      savedAt: new Date(data.savedAt).toLocaleString()
+    }))
+    .sort((left, right) => new Date(right.savedAt) - new Date(left.savedAt))
 }
 
 // 删除布局
@@ -83,6 +87,16 @@ export const deleteLayout = (name) => {
   const layouts = loadFromStorage('layouts', {})
   delete layouts[name]
   return saveToStorage('layouts', layouts)
+}
+
+// 保存当前工作区
+export const saveWorkspace = (workspace) => {
+  return saveToStorage(WORKSPACE_KEY, serializeWorkspace(workspace))
+}
+
+// 加载当前工作区
+export const loadWorkspace = () => {
+  return loadFromStorage(WORKSPACE_KEY, null)
 }
 
 // 保存连接配置
@@ -119,11 +133,12 @@ export const loadProtocolConfig = () => {
 export const exportConfig = (filename = 'meow_config.json') => {
   const config = {
     layouts: loadFromStorage('layouts', {}),
+    workspace: loadWorkspace(),
     connection: loadFromStorage('connection', {}),
     protocol: loadFromStorage('protocol', {}),
     exportedAt: Date.now()
   }
-  
+
   const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -140,9 +155,12 @@ export const importConfig = (file) => {
     reader.onload = (e) => {
       try {
         const config = JSON.parse(e.target.result)
-        
+
         if (config.layouts) {
           saveToStorage('layouts', config.layouts)
+        }
+        if (config.workspace) {
+          saveWorkspace(config.workspace)
         }
         if (config.connection) {
           saveToStorage('connection', config.connection)
@@ -150,7 +168,7 @@ export const importConfig = (file) => {
         if (config.protocol) {
           saveToStorage('protocol', config.protocol)
         }
-        
+
         resolve(config)
       } catch (err) {
         reject(err)

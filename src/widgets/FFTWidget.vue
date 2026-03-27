@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useSerialStore } from '../stores/serial'
+import { useThemeStore } from '../stores/theme'
 
 const props = defineProps({
   widget: Object

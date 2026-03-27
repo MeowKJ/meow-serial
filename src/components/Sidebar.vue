@@ -7,6 +7,7 @@ const store = useSerialStore()
 // 折叠状态
 const collapsed = ref({
   connection: false,
+  radar: false,
   presets: true,
   channels: false,
   protocol: true
@@ -70,9 +71,234 @@ const onToggleConnect = async () => {
   await store.toggleConnect()
 }
 
+const radarCfgFile = ref(null)
+const radarCfgFileName = ref('')
+const radarCfgDelayMs = ref(store.protocol.radarCfgDelayMs || 80)
+
+const applyRadarDataPreset = () => {
+  store.baudRate = 921600
+  store.setProtocol({
+    type: 'mmwave',
+    waitForLF: false,
+    filterEmptyLines: false,
+    radarCfgDelayMs: radarCfgDelayMs.value
+  })
+}
+
+const onRadarCfgSelected = (event) => {
+  const [file] = event.target.files || []
+  radarCfgFile.value = file || null
+  radarCfgFileName.value = file?.name || ''
+}
+
+const sendRadarCfg = async () => {
+  if (!radarCfgFile.value) return
+
+  store.setProtocol({
+    radarCfgDelayMs: radarCfgDelayMs.value
+  })
+
+  const text = await radarCfgFile.value.text()
+  await store.sendRadarConfigText(text, {
+    delayMs: radarCfgDelayMs.value
+  })
+}
+
+const onRequestRadarCliPort = async () => {
+  await store.requestRadarCliPort()
+}
+
+const onToggleRadarCli = async () => {
+  if (typeof store.toggleRadarCli === 'function') {
+    await store.toggleRadarCli()
+    return
+  }
+
+  if (store.radarCliConnected && typeof store.disconnectRadarCli === 'function') {
+    await store.disconnectRadarCli()
+    return
+  }
+
+  if (!store.radarCliConnected && typeof store.connectRadarCli === 'function') {
+    await store.connectRadarCli()
+    return
+  }
+
+  store.addLog('error', '当前页面还在使用旧版前端脚本，请刷新页面或重启 pnpm dev')
+}
+
+const onSendRadarCliCommand = async (command) => {
+  await store.sendRadarCli(command, {
+    appendCR: false,
+    appendLF: true,
+    isHex: false
+  })
+}
+
+const radarWidgetSpecs = [
+  {
+    key: 'breathWave',
+    label: '主bin解缠绕相位',
+    widget: {
+      type: 'waveform',
+      title: '主bin解缠绕相位',
+      x: 20,
+      y: 20,
+      w: 560,
+      h: 220,
+      channels: [0],
+      historyLength: 240,
+      unit: 'rad',
+      yAxisLabel: '主bin解缠绕相位'
+    }
+  },
+  {
+    key: 'neighborPhase',
+    label: '邻域解缠绕相位',
+    widget: {
+      type: 'waveform',
+      title: '邻域解缠绕相位',
+      x: 20,
+      y: 260,
+      w: 560,
+      h: 220,
+      channels: [8, 9, 10, 11, 12],
+      historyLength: 240,
+      unit: 'rad',
+      yAxisLabel: '邻域解缠绕相位'
+    }
+  },
+  {
+    key: 'neighborEnergy',
+    label: '能量对比',
+    widget: {
+      type: 'waveform',
+      title: '能量对比',
+      x: 600,
+      y: 20,
+      w: 420,
+      h: 220,
+      channels: [13, 14, 15, 16, 17],
+      historyLength: 240,
+      unit: '',
+      yAxisLabel: '当前bin与邻域能量'
+    }
+  },
+  {
+    key: 'bpm',
+    label: '呼吸 BPM',
+    widget: {
+      type: 'value',
+      title: '呼吸 BPM',
+      x: 600,
+      y: 260,
+      w: 200,
+      h: 120,
+      channel: 5,
+      unit: 'bpm',
+      precision: 2
+    }
+  },
+  {
+    key: 'confidence',
+    label: '置信度',
+    widget: {
+      type: 'value',
+      title: '置信度',
+      x: 820,
+      y: 260,
+      w: 200,
+      h: 120,
+      channel: 6,
+      unit: '',
+      precision: 2
+    }
+  },
+  {
+    key: 'peakEnergy',
+    label: '峰值能量',
+    widget: {
+      type: 'value',
+      title: '峰值能量',
+      x: 600,
+      y: 400,
+      w: 200,
+      h: 120,
+      channel: 3,
+      unit: '',
+      precision: 3
+    }
+  },
+  {
+    key: 'range',
+    label: '目标距离',
+    widget: {
+      type: 'value',
+      title: '目标距离',
+      x: 820,
+      y: 400,
+      w: 200,
+      h: 120,
+      channel: 7,
+      unit: 'm',
+      precision: 2
+    }
+  },
+  {
+    key: 'temperature',
+    label: '温度',
+    widget: {
+      type: 'value',
+      title: '温度',
+      x: 1040,
+      y: 260,
+      w: 180,
+      h: 120,
+      channel: 18,
+      unit: '°C',
+      precision: 1
+    }
+  },
+  {
+    key: 'temperatureTrend',
+    label: '温度曲线',
+    widget: {
+      type: 'waveform',
+      title: '温度曲线',
+      x: 1040,
+      y: 20,
+      w: 360,
+      h: 220,
+      channels: [18],
+      historyLength: 240,
+      fullHistory: true,
+      unit: '°C',
+      yAxisLabel: '温度'
+    }
+  }
+]
+
+const findRadarWidgetIdsByTitle = (title) => {
+  return store.widgets.filter(widget => widget.title === title).map(widget => widget.id)
+}
+
+const hasRadarWidget = (title) => {
+  return findRadarWidgetIdsByTitle(title).length > 0
+}
+
+const toggleRadarWidget = (spec) => {
+  const existingIds = findRadarWidgetIdsByTitle(spec.widget.title)
+  if (existingIds.length > 0) {
+    existingIds.forEach(id => store.removeWidget(id))
+    return
+  }
+
+  store.addWidget({ ...spec.widget })
+}
+
 // 添加通道
 const onAddChannel = () => {
-  if (store.channels.length < 8) {
+  if (store.channels.length < 19) {
     store.addChannel()
   }
 }
@@ -252,6 +478,152 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- ===== 雷达工具 ===== -->
+      <div class="border-b border-cat-border">
+        <button
+          @click="toggleCollapse('radar')"
+          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-cat-accent">📡</span>
+            <span class="font-medium text-sm">雷达工具</span>
+          </div>
+          <span class="text-cat-muted text-xs transition-transform" :class="collapsed.radar ? '' : 'rotate-180'">▼</span>
+        </button>
+
+        <div v-show="!collapsed.radar" class="px-3 pb-3 space-y-3">
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              @click="applyRadarDataPreset"
+              :disabled="store.connected"
+              class="cat-btn-secondary px-2 py-2 rounded-lg text-xs text-left disabled:opacity-50"
+            >
+              <div class="font-medium">主连接 = Data</div>
+              <div class="text-cat-muted text-[10px]">921600 + mmWave</div>
+            </button>
+            <button
+              disabled
+              class="cat-btn-secondary px-2 py-2 rounded-lg text-xs text-left disabled:opacity-50"
+            >
+              <div class="font-medium">专用 CLI</div>
+              <div class="text-cat-muted text-[10px]">115200 + 授权后发送</div>
+            </button>
+          </div>
+
+          <div class="space-y-2 bg-cat-surface rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-cat-muted">雷达 cfg 文件</span>
+              <span class="text-[10px] text-cat-primary">{{ radarCfgFileName || '未选择' }}</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <div class="text-xs text-cat-muted">专用 CLI 口</div>
+                <div class="text-[10px] text-cat-primary truncate">{{ store.radarCliPortName || '未授权' }}</div>
+              </div>
+              <button
+                @click="onRequestRadarCliPort"
+                class="cat-btn-secondary px-2 py-1 rounded text-xs shrink-0"
+              >
+                选择 CLI
+              </button>
+            </div>
+
+            <button
+              @click="onToggleRadarCli"
+              :disabled="!store.radarCliPort && !store.radarCliConnected"
+              class="w-full cat-btn-secondary py-2 rounded text-sm disabled:opacity-50"
+            >
+              {{ store.radarCliConnecting ? '连接 CLI 中...' : (store.radarCliConnected ? '断开 CLI 监听' : '连接 CLI 监听') }}
+            </button>
+
+            <div class="text-[10px] text-cat-muted">
+              CLI 状态:
+              <span :class="store.radarCliConnected ? 'text-green-400' : 'text-cat-muted'">
+                {{ store.radarCliConnected ? '已监听' : '未监听' }}
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 gap-2">
+              <button
+                @click="onSendRadarCliCommand('queryDemoStatus')"
+                :disabled="!store.radarCliConnected"
+                class="w-full cat-btn-secondary py-2 rounded text-xs disabled:opacity-50"
+              >
+                查询状态
+              </button>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  @click="onSendRadarCliCommand('sensorStop')"
+                  :disabled="!store.radarCliConnected"
+                  class="w-full cat-btn-secondary py-2 rounded text-xs disabled:opacity-50"
+                >
+                  停止传感器
+                </button>
+                <button
+                  @click="onSendRadarCliCommand('sensorStart 0')"
+                  :disabled="!store.radarCliConnected"
+                  class="w-full cat-btn-secondary py-2 rounded text-xs disabled:opacity-50"
+                >
+                  重新启动
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div class="text-xs text-cat-muted">雷达控件</div>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  v-for="spec in radarWidgetSpecs"
+                  :key="spec.key"
+                  @click="toggleRadarWidget(spec)"
+                  :class="[
+                    'w-full py-2 rounded text-xs transition-colors',
+                    hasRadarWidget(spec.widget.title)
+                      ? 'bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25'
+                      : 'cat-btn-secondary'
+                  ]"
+                >
+                  {{ hasRadarWidget(spec.widget.title) ? `删除${spec.label}` : `添加${spec.label}` }}
+                </button>
+              </div>
+            </div>
+
+            <input
+              type="file"
+              accept=".cfg,.txt"
+              @change="onRadarCfgSelected"
+              class="w-full text-xs text-cat-muted file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:bg-cat-card file:text-cat-text"
+            >
+
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-cat-muted shrink-0">行间隔</span>
+              <input
+                v-model.number="radarCfgDelayMs"
+                type="number"
+                min="0"
+                step="10"
+                class="w-20 bg-cat-card border border-cat-border rounded px-2 py-1 text-xs text-center"
+              >
+              <span class="text-xs text-cat-muted">ms</span>
+            </div>
+
+            <button
+              @click="sendRadarCfg"
+              :disabled="!radarCfgFile || !store.radarCliPort"
+              class="w-full cat-btn py-2 rounded text-sm text-white disabled:opacity-50"
+            >
+              发送雷达 cfg
+            </button>
+          </div>
+
+          <div class="text-[10px] text-cat-muted bg-cat-dark/30 rounded p-2">
+            <span class="text-cat-text">提示:</span>
+            双串口模式固定为：主连接只收 `Data`，`cfg` 只走专用 `CLI` 口。
+          </div>
+        </div>
+      </div>
+
       <!-- ===== 快捷配置 ===== -->
       <div class="border-b border-cat-border">
         <button 
@@ -403,7 +775,7 @@ Serial.println();</pre>
           <div class="flex items-center gap-2">
             <span class="text-cat-accent">📊</span>
             <span class="font-medium text-sm">数据通道</span>
-            <span class="text-xs text-cat-muted">({{ store.channels.length }}/8)</span>
+            <span class="text-xs text-cat-muted">({{ store.channels.length }}/19)</span>
           </div>
           <span class="text-cat-muted text-xs transition-transform" :class="collapsed.channels ? '' : 'rotate-180'">▼</span>
         </button>
@@ -413,7 +785,7 @@ Serial.println();</pre>
           <div class="flex justify-end mb-2">
             <button 
               @click="onAddChannel" 
-              :disabled="store.channels.length >= 8"
+                :disabled="store.channels.length >= 19"
               class="text-xs text-cat-primary hover:underline disabled:opacity-50 disabled:no-underline"
             >
               + 添加通道
@@ -451,7 +823,7 @@ Serial.println();</pre>
               
               <!-- 当前值 -->
               <span class="font-mono text-xs tabular-nums w-16 text-right" :style="{color: ch.color}">
-                {{ ch.value.toFixed(2) }}
+                {{ Number.isFinite(ch.value) ? ch.value.toFixed(2) : '--' }}
               </span>
               
               <!-- 删除按钮 -->

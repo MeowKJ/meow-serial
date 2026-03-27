@@ -122,15 +122,8 @@ const showContextMenu = (widget, e) => {
   emit('show-settings')
 }
 
-// 初始化默认控件
 onMounted(() => {
-  if (store.widgets.length === 0) {
-    store.addWidget({ type: 'waveform', title: '波形图', x: 20, y: 20, w: 500, h: 250, channels: [0, 1, 2] })
-    store.addWidget({ type: 'value', title: '温度显示', x: 540, y: 20, w: 160, h: 120, channel: 0, unit: '°C' })
-    store.addWidget({ type: 'gauge', title: '仪表盘', x: 540, y: 160, w: 160, h: 140, channel: 1, unit: '%' })
-    store.addWidget({ type: 'button', title: '控制按钮', x: 20, y: 290, w: 150, h: 80, label: '开始采集', command: 'START' })
-    store.addWidget({ type: 'led', title: 'LED状态', x: 190, y: 290, w: 180, h: 80 })
-  }
+  // 保持画布默认空白，避免自动插入与雷达场景无关的控件。
 })
 </script>
 
@@ -153,12 +146,14 @@ onMounted(() => {
         width: widget.w + 'px', 
         height: widget.h + 'px'
       }"
-      @mousedown.stop="startDrag(widget, $event)"
       @click.stop="selectWidget(widget, $event)"
       @contextmenu.stop="showContextMenu(widget, $event)"
     >
       <!-- 控件头部 -->
-      <div class="h-8 bg-cat-surface/80 border-b border-cat-border flex items-center px-3 cursor-move">
+      <div
+        class="h-8 bg-cat-surface/80 border-b border-cat-border flex items-center px-3 cursor-move"
+        @mousedown.stop="startDrag(widget, $event)"
+      >
         <span class="text-sm text-cat-muted truncate">{{ widget.title }}</span>
         <button 
           @click.stop="emit('show-settings')" 
@@ -194,9 +189,9 @@ onMounted(() => {
     <!-- 空状态 -->
     <div v-if="store.widgets.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none">
       <div class="text-center">
-        <div class="text-6xl mb-4">🐱</div>
-        <div class="text-cat-muted text-lg">画布是空的喵~</div>
-        <div class="text-cat-muted text-sm mt-2">点击「控件喵盒」添加控件</div>
+        <div class="text-6xl mb-4">📈</div>
+        <div class="text-cat-text text-lg">画布当前没有图表</div>
+        <div class="text-cat-muted text-sm mt-2">左侧雷达工具里点「添加呼吸图」或「添加能量图」</div>
       </div>
     </div>
   </div>

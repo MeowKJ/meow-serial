@@ -4,6 +4,8 @@
  * 支持 Chrome 89+, Edge 89+
  */
 
+import { parseMmwavePacketsFromBuffer } from './mmwaveParser'
+
 class SerialManager {
   constructor() {
     this.port = null
@@ -38,7 +40,7 @@ class SerialManager {
     
     // 协议解析配置
     this.protocol = {
-      type: 'line',        // 'line' | 'length' | 'delimiter' | 'raw'
+      type: 'line',        // 'line' | 'length' | 'delimiter' | 'raw' | 'mmwave'
       delimiter: '\n',     // 行结束符
       length: 0,           // 固定长度
       timeout: 100,         // 超时时间(ms)
@@ -381,7 +383,12 @@ class SerialManager {
         // 固定长度
         this.processLengthData(data)
         break
-        
+
+      case 'mmwave':
+        // TI mmWave 二进制数据包
+        this.processMmwaveData(data)
+        break
+
       default:
         // 默认行为：根据 waitForLF 决定
         if (this.protocol.waitForLF) {
@@ -534,6 +541,26 @@ class SerialManager {
         })
       }
     }
+  }
+
+  /**
+   * TI mmWave 二进制数据处理
+   */
+  processMmwaveData(data) {
+    const { packets, remainingBuffer } = parseMmwavePacketsFromBuffer(this.buffer, data)
+    this.buffer = remainingBuffer
+
+    packets.forEach(packet => {
+      this.stats.packetsReceived++
+      if (this.onData) {
+        this.onData({
+          raw: packet.rawBytes || null,
+          text: packet.summary,
+          timestamp: Date.now(),
+          parsed: packet
+        })
+      }
+    })
   }
   
   /**
