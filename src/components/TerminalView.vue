@@ -1,26 +1,88 @@
 <script setup>
 import { ref, watch, nextTick, onUnmounted, onMounted, computed } from 'vue'
 import { useSerialStore } from '../stores/serial'
+import { usePortsStore } from '../stores/ports'
 import { notify } from '../utils/notification'
-import BaseConverter from './terminal/BaseConverter.vue'
 
 const store = useSerialStore()
+const portsStore = usePortsStore()
 
-// 工具面板显示状态
-const showTools = ref(false)
+const props = defineProps({
+  settingsVisible: {
+    type: Boolean,
+    default: true
+  }
+})
+
+const emit = defineEmits(['toggle-settings'])
+
+// 当前选中的 Tab (端口 ID 或 '__all__')
+const activeTab = ref('__all__')
+
+// 当前 Tab 的日志
+const currentLogs = computed(() => {
+  if (activeTab.value === '__all__') {
+    // 合并所有端口日志，按时间排序
+    const allLogs = []
+    for (const p of portsStore.ports) {
+      for (const log of p.logs) {
+        allLogs.push({ ...log, _portLabel: p.label })
+      }
+    }
+    allLogs.sort((a, b) => a.id - b.id)
+    return allLogs
+  }
+  const portState = portsStore.getPort(activeTab.value)
+  return portState ? portState.logs : []
+})
+
+const visiblePorts = computed(() => {
+  if (activeTab.value === '__all__') {
+    return portsStore.ports
+  }
+  const portState = portsStore.getPort(activeTab.value)
+  return portState ? [portState] : []
+})
+
+const mutedVisiblePorts = computed(() => visiblePorts.value.filter(port => port.connected && !port.showTerminalRx))
+
+// 手动选择发送目标 (在全部 Tab 下)
+const manualSendTarget = ref('')
+
+// 发送目标端口
+const sendTargetPortId = computed(() => {
+  if (activeTab.value !== '__all__' && portsStore.getPort(activeTab.value)) {
+    return activeTab.value
+  }
+  // 全部 Tab: 使用手动选择或默认第一个已连接端口
+  if (manualSendTarget.value) {
+    const p = portsStore.getPort(manualSendTarget.value)
+    if (p?.connected) return manualSendTarget.value
+  }
+  const connected = portsStore.ports.find(p => p.connected)
+  return connected?.id || portsStore.ports[0]?.id || null
+})
+
+const canSend = computed(() => {
+  if (!sendTargetPortId.value) return false
+  const p = portsStore.getPort(sendTargetPortId.value)
+  return p?.connected || false
+})
+
+const showActionsPanel = ref(false)
 
 // 统计数据计算
 const sysCount = computed(() =>
-  store.terminalLogs.filter(log => log.dir === 'system').length
+  currentLogs.value.filter(log => log.dir === 'system').length
 )
 const errCount = computed(() =>
-  store.terminalLogs.filter(log => log.dir === 'error').length
+  currentLogs.value.filter(log => log.dir === 'error').length
 )
 const txCount = computed(() =>
-  store.terminalLogs.filter(log => log.dir === 'tx').length
+  currentLogs.value.filter(log => log.dir === 'tx').length
 )
 const rxCount = computed(() =>
-  store.terminalLogs.filter(log => log.dir === 'rx').length
+  currentLogs.value.filter(log => log.dir === 'rx').length
 )
 
 // 获取消息类型对应的颜色
@@ -36,7 +98,7 @@ const getLogColor = (dir) => {
 
 // 生成进度条的消息颜色序列（按实际消息顺序）
 const progressSegments = computed(() => {
-  const logs = store.terminalLogs
+  const logs = currentLogs.value
   if (logs.length === 0) return []
 
   // 将消息分组，相邻相同类型的合并
@@ -180,13 +242,22 @@ const clientHeight = ref(1)
 // 过滤后的日志
 const filteredTerminalLogs = computed(() => {
   if (dataFilter.value === 'all') {
-    return store.terminalLogs
+    return currentLogs.value
   }
-  return store.terminalLogs.filter(log => {
-    if (dataFilter.value === 'tx') return log.dir === 'tx'
-    if (dataFilter.value === 'rx') return log.dir === 'rx'
-    return true
-  })
+  return currentLogs.value.filter(log => log.dir === dataFilter.value)
+})
+
+const emptyStateCopy = computed(() => {
+  if (currentLogs.value.length > 0 && filteredTerminalLogs.value.length === 0) {
+    return '当前过滤条件下没有数据喵~'
+  }
+  if (!portsStore.anyConnected) {
+    return '请先连接串口喵~'
+  }
+  if (mutedVisiblePorts.value.length > 0) {
+    return '高速端口已静默终端打印，解析和图表仍在继续'
+  }
+  return '等待数据喵~'
 })
 
 // 更新滚动信息
@@ -261,9 +332,11 @@ const quickCommands = [
   { name: 'LED关', cmd: 'LED OFF' }
 ]
 
-const shouldSendViaRadarCli = computed(() =>
-  store.protocol.type === 'mmwave' && store.radarCliConnected
-)
+const applyQuickCommand = (cmd) => {
+  sendInput.value = cmd.cmd
+  showActionsPanel.value = false
+}
+
 
 // 发送数据
 const sendData = async () => {
@@ -295,9 +368,9 @@ const sendData = async () => {
   }
   historyIndex.value = -1
 
-  // 发送
-  const sendFn = shouldSendViaRadarCli.value ? store.sendRadarCli : store.send
-  await sendFn(data, {
+  // 发送到当前目标端口
+  if (!sendTargetPortId.value) return
+  await portsStore.sendToPort(sendTargetPortId.value, data, {
     appendCR: sendAsHex.value ? false : appendCR.value,
     appendLF: sendAsHex.value ? false : appendLF.value,
     isHex: sendAsHex.value
@@ -339,7 +412,19 @@ const handleKeyDown = (e) => {
 
 // 清空终端
 const clearTerminal = () => {
-  store.clearTerminal()
+  const shouldClearLog = (log) => dataFilter.value === 'all' || log.dir === dataFilter.value
+
+  if (activeTab.value === '__all__') {
+    for (const p of portsStore.ports) {
+      portsStore.clearPortLogs(p.id, shouldClearLog)
+    }
+  } else {
+    portsStore.clearPortLogs(activeTab.value, shouldClearLog)
+  }
+}
+
+const togglePortTerminalRx = (portId, enabled) => {
+  portsStore.setPortTerminalRx(portId, enabled)
 }
 
 // 获取HEX字节数组
@@ -1131,15 +1216,21 @@ const handleClickOutside = (event) => {
   // 检查点击是否在tooltip内部
   const tooltip = event.target.closest('.dir-tooltip')
   const label = event.target.closest('[data-dir-label]')
+  const actionPanel = event.target.closest('[data-terminal-actions-panel]')
+  const actionButton = event.target.closest('[data-terminal-actions-button]')
 
   // 如果点击不在tooltip和标签上，则关闭tooltip
   if (!tooltip && !label) {
     clickedDirLabel.value = null
   }
+
+  if (!actionPanel && !actionButton) {
+    showActionsPanel.value = false
+  }
 }
 
 // 自动滚动
-watch(() => store.terminalLogs.length, async () => {
+watch(() => currentLogs.value.length, async () => {
   if (autoScroll.value && terminalEl.value) {
     await nextTick()
     terminalEl.value.scrollTop = terminalEl.value.scrollHeight
@@ -1194,12 +1285,10 @@ watch(displayMode, async (newMode, oldMode) => {
 watch(timerEnabled, (enabled) => {
   if (enabled && sendInput.value) {
     timerHandle = setInterval(async () => {
-      const canSend = shouldSendViaRadarCli.value ? store.radarCliConnected : store.connected
-      if (sendInput.value && canSend) {
-        const sendFn = shouldSendViaRadarCli.value ? store.sendRadarCli : store.send
-        await sendFn(sendInput.value, {
-          appendCR: appendCR.value,
-          appendLF: appendLF.value,
+      if (sendInput.value && canSend.value && sendTargetPortId.value) {
+        await portsStore.sendToPort(sendTargetPortId.value, sendInput.value, {
+          appendCR: sendAsHex.value ? false : appendCR.value,
+          appendLF: sendAsHex.value ? false : appendLF.value,
           isHex: sendAsHex.value
         })
       }
@@ -1246,55 +1335,97 @@ watch(terminalEl, (el) => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col p-4 gap-4">
+  <div class="h-full flex flex-col p-3 gap-3">
     <!-- 工具栏 -->
-    <div class="flex items-center gap-4 flex-wrap">
-      <div class="flex items-center gap-2">
-        <span class="text-sm text-cat-muted">显示格式:</span>
-        <div class="flex bg-cat-surface rounded-lg p-0.5">
+    <div class="rounded-xl border border-cat-border bg-cat-card px-2.5 py-1.5 overflow-x-auto">
+      <div class="flex items-center gap-2 min-w-max flex-nowrap">
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="text-[11px] text-cat-muted">显示格式</span>
+          <div class="flex bg-cat-surface rounded-lg p-0.5">
           <button v-for="m in ['UTF-8', 'HEX', '混合']" :key="m" @click="displayMode = m" :class="[
-            'px-3 py-1 text-sm rounded-md transition-colors',
+            'px-2.5 py-0.5 text-[11px] rounded-md transition-colors',
             displayMode === m ? 'bg-cat-primary text-white' : 'text-cat-muted hover:text-cat-text'
           ]">
             {{ m }}
           </button>
+          </div>
         </div>
-      </div>
-      <label class="flex items-center gap-2 text-sm text-cat-muted cursor-pointer">
-        <input type="checkbox" v-model="showTimestamp" class="accent-cat-primary"> 时间戳
-      </label>
-      <label class="flex items-center gap-2 text-sm text-cat-muted cursor-pointer">
-        <input type="checkbox" v-model="autoScroll" class="accent-cat-primary"> 自动滚动
-      </label>
-      <label v-if="displayMode === 'HEX'" class="flex items-center gap-2 text-sm text-cat-muted cursor-pointer">
-        <input type="checkbox" v-model="enableHexHoverTranslation" class="accent-cat-primary"> HEX翻译
-      </label>
-      <div class="ml-auto flex gap-2">
-        <button @click="showTools = !showTools"
-          :class="[
-            'cat-btn-secondary px-3 py-1.5 rounded-lg text-sm transition-colors',
-            showTools ? 'bg-cat-primary/20 border-cat-primary text-cat-primary' : ''
-          ]">
-          🔧 工具
-        </button>
-        <button @click="clearTerminal" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-sm">
-          🗑️ 清空
-        </button>
+        <div v-if="portsStore.ports.length > 0" class="flex items-center gap-1.5 shrink-0">
+          <span class="text-[11px] text-cat-muted">终端范围</span>
+          <select
+            v-model="activeTab"
+            class="min-w-[9.5rem] bg-cat-surface border border-cat-border rounded-lg px-2.5 py-1 text-[11px] text-cat-text"
+          >
+            <option value="__all__">全部端口</option>
+            <option v-for="p in portsStore.ports" :key="p.id" :value="p.id">
+              {{ p.label }}
+            </option>
+          </select>
+        </div>
+        <label class="flex items-center gap-1.5 text-[11px] text-cat-muted cursor-pointer shrink-0">
+          <input type="checkbox" v-model="showTimestamp" class="accent-cat-primary"> 时间戳
+        </label>
+        <label class="flex items-center gap-1.5 text-[11px] text-cat-muted cursor-pointer shrink-0">
+          <input type="checkbox" v-model="autoScroll" class="accent-cat-primary"> 自动滚动
+        </label>
+        <label v-if="displayMode === 'HEX'" class="flex items-center gap-1.5 text-[11px] text-cat-muted cursor-pointer shrink-0">
+          <input type="checkbox" v-model="enableHexHoverTranslation" class="accent-cat-primary"> HEX翻译
+        </label>
+        <div class="ml-auto flex items-center gap-1.5 shrink-0 pl-2">
+          <div v-if="sendTargetPortId && activeTab === '__all__'" class="text-[11px] text-cat-muted flex items-center gap-1 shrink-0">
+            发送到:
+            <select v-model="manualSendTarget" class="bg-cat-dark border border-cat-border rounded-lg px-2 py-0.5 text-[11px] text-cat-text">
+              <option value="">自动 (首个已连接)</option>
+              <option v-for="p in portsStore.ports" :key="p.id" :value="p.id">{{ p.label }}</option>
+            </select>
+          </div>
+          <button
+            @click="emit('toggle-settings')"
+            :class="[
+              'cat-btn-secondary px-2.5 py-1 rounded-lg text-[11px] transition-colors',
+              props.settingsVisible ? 'bg-cat-primary/20 border-cat-primary text-cat-primary' : ''
+            ]"
+          >
+            {{ props.settingsVisible ? '⚙ 收起侧栏' : '⚙ 打开侧栏' }}
+          </button>
+          <button @click="clearTerminal" class="cat-btn-secondary px-2.5 py-1 rounded-lg text-[11px]">
+            🗑️ 清空
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- 工具面板 -->
-    <div v-if="showTools" class="flex gap-4 flex-wrap">
-      <BaseConverter class="w-72" />
+    <div v-if="mutedVisiblePorts.length > 0" class="rounded-2xl border border-cat-border bg-cat-card px-3 py-2.5">
+      <div class="flex items-start gap-3">
+        <div class="text-sm text-cat-text">
+          高速端口已关闭终端接收打印，避免终端刷屏。解析器、图表和统计仍然继续。
+        </div>
+        <div class="ml-auto flex flex-wrap justify-end gap-2">
+          <label
+            v-for="port in mutedVisiblePorts"
+            :key="port.id"
+            class="flex items-center gap-2 rounded-full bg-cat-surface px-2.5 py-1 text-xs text-cat-muted cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              :checked="port.showTerminalRx"
+              @change="event => togglePortTerminalRx(port.id, event.target.checked)"
+              class="accent-cat-primary"
+            >
+            {{ port.label }} 打印
+          </label>
+        </div>
+      </div>
     </div>
 
     <!-- 终端显示 -->
-    <div ref="terminalEl" class="flex-1 bg-cat-surface rounded-xl p-4 overflow-auto font-mono text-sm"
+    <div ref="terminalEl" class="flex-1 bg-cat-surface border border-cat-border rounded-2xl p-3 overflow-auto font-mono text-sm"
          @scroll="handleTerminalScroll">
       <div v-for="log in filteredTerminalLogs" :key="log.id"
         :data-log-id="log.id"
         class="flex items-start gap-3 py-0.5 hover:bg-cat-border/30 px-2 -mx-2 rounded log-item">
         <span v-if="showTimestamp" class="text-cat-muted shrink-0 text-xs">{{ log.time }}</span>
+        <span v-if="activeTab === '__all__' && log._portLabel" class="text-cat-accent shrink-0 text-xs font-medium">[{{ log._portLabel }}]</span>
         <span :class="['shrink-0 text-xs w-8 text-center py-0.5 rounded cursor-pointer relative', getLogClass(log.dir)]"
           :data-dir-label="log.id"
           @click.stop="(displayMode === 'HEX' || displayMode === 'UTF-8') && handleDirLabelClick($event, log.id)">
@@ -1414,14 +1545,13 @@ watch(terminalEl, (el) => {
       <div v-if="filteredTerminalLogs.length === 0" class="h-full flex items-center justify-center text-cat-muted">
         <div class="text-center">
           <div class="text-2xl mb-2">🐱</div>
-          <div v-if="store.terminalLogs.length === 0">{{ store.connected ? '等待数据喵~' : '请先连接串口喵~' }}</div>
-          <div v-else>当前过滤条件下没有数据喵~</div>
+          <div>{{ emptyStateCopy }}</div>
         </div>
       </div>
     </div>
 
     <!-- 状态栏 - 横向消息地图进度条 -->
-    <div class="bg-cat-surface rounded-lg px-3 py-2">
+    <div class="bg-cat-card border border-cat-border rounded-2xl px-3 py-2">
       <div class="flex items-center gap-3">
         <!-- 消息地图进度条 -->
         <div ref="progressBarEl"
@@ -1481,29 +1611,27 @@ watch(terminalEl, (el) => {
     </div>
 
     <!-- 发送区 -->
-    <div class="bg-cat-surface rounded-xl p-4">
+    <div class="bg-cat-card border border-cat-border rounded-2xl p-3">
       <div class="flex gap-3">
         <div class="flex-1 relative">
           <input v-model="sendInput" @keyup.enter="sendData" @keydown="handleKeyDown" @input="handleHexInput"
-            :disabled="shouldSendViaRadarCli ? !store.radarCliConnected : !store.connected"
+            :disabled="!canSend"
             :placeholder="sendAsHex
               ? '输入HEX数据，如: 01 02 FF (空格可选)'
-              : (shouldSendViaRadarCli
-                ? '当前将发送到雷达 CLI... (↑↓ 历史)'
-                : (store.connected ? '输入要发送的数据... (↑↓ 历史)' : '请先连接串口...'))"
-            class="w-full bg-cat-dark border border-cat-border rounded-lg px-4 py-2.5 pr-20 disabled:opacity-50"
+              : (canSend ? '输入要发送的数据... (↑↓ 历史)' : '请先连接串口...')"
+            class="w-full bg-cat-dark border border-cat-border rounded-xl px-4 py-2.5 pr-20 disabled:opacity-50"
             :class="{ 'font-mono text-cat-accent': sendAsHex }">
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-cat-muted">
             {{ sendInput.length }} 字符
           </span>
         </div>
-        <button @click="sendData" :disabled="(shouldSendViaRadarCli ? !store.radarCliConnected : !store.connected) || !sendInput.trim()"
-          class="cat-btn px-6 py-2.5 rounded-lg font-medium text-white disabled:opacity-50">
-          {{ shouldSendViaRadarCli ? '发到 CLI 🐾' : '发送喵 🐾' }}
+        <button @click="sendData" :disabled="!canSend || !sendInput.trim()"
+          class="cat-btn px-5 py-2.5 rounded-xl font-medium text-white disabled:opacity-50">
+          发送
         </button>
       </div>
 
-      <div class="flex items-center gap-6 mt-3 text-sm flex-wrap">
+      <div class="flex items-center gap-5 mt-3 text-sm flex-wrap">
         <label class="flex items-center gap-2 text-cat-muted cursor-pointer">
           <input type="checkbox" v-model="appendCR" class="accent-cat-primary"> +CR
         </label>
@@ -1520,19 +1648,42 @@ watch(terminalEl, (el) => {
           <input type="checkbox" v-model="timerEnabled" :disabled="!sendInput.trim()" class="accent-cat-primary">
           定时发送
           <input type="number" v-model.number="timerInterval" :disabled="!timerEnabled" min="100" step="100"
-            class="w-20 bg-cat-dark border border-cat-border rounded px-2 py-1 text-center disabled:opacity-50">
+            class="w-20 bg-cat-dark border border-cat-border rounded-lg px-2 py-1 text-center disabled:opacity-50">
           ms
         </div>
-      </div>
+        <div class="ml-auto flex items-center gap-2">
+          <div class="relative">
+            <button
+              data-terminal-actions-button
+              @click.stop="showActionsPanel = !showActionsPanel"
+              :class="[
+                'cat-btn-secondary px-3 py-1.5 rounded-xl text-sm transition-colors',
+                showActionsPanel ? 'bg-cat-primary/20 border-cat-primary text-cat-primary' : ''
+              ]"
+            >
+              ⚡ 操作面板
+            </button>
 
-      <!-- 快捷命令 -->
-      <div class="flex items-center gap-2 mt-3 pt-3 border-t border-cat-border flex-wrap">
-        <span class="text-xs text-cat-muted">快捷:</span>
-        <button v-for="cmd in quickCommands" :key="cmd.name" @click="sendInput = cmd.cmd"
-          class="cat-btn-secondary px-2 py-1 rounded text-xs">
-          {{ cmd.name }}
-        </button>
-        <div class="flex-1"></div>
+            <div
+              v-if="showActionsPanel"
+              data-terminal-actions-panel
+              class="absolute right-0 bottom-full mb-2 w-64 rounded-2xl border border-cat-border bg-cat-card shadow-2xl p-3 z-20"
+            >
+              <div class="text-xs text-cat-muted mb-2">快捷填充</div>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="cmd in quickCommands"
+                  :key="cmd.name"
+                  @click="applyQuickCommand(cmd)"
+                  class="cat-btn-secondary px-2.5 py-1.5 rounded-lg text-xs"
+                >
+                  {{ cmd.name }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
         <span class="text-xs text-cat-muted">历史: {{ sendHistory.length }} 条</span>
       </div>
     </div>

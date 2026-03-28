@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useSerialStore } from '../stores/serial'
+import { usePortsStore } from '../stores/ports'
 
 const emit = defineEmits(['close', 'export-log'])
 const store = useSerialStore()
+const portsStore = usePortsStore()
 
 // 折叠状态
 const collapsed = ref({
@@ -163,11 +165,12 @@ watch(autoSendEnabled, (val) => {
 
 function startAutoSend() {
   stopAutoSend()
-  if (!autoSendData.value || !store.connected) return
+  if (!autoSendData.value || !portsStore.anyConnected) return
 
   autoSendTimer = setInterval(() => {
-    if (store.connected) {
-      store.send(autoSendData.value, { isHex: autoSendHex.value, appendLF: !autoSendHex.value })
+    const target = portsStore.ports.find(p => p.connected)
+    if (target) {
+      portsStore.sendToPort(target.id, autoSendData.value, { isHex: autoSendHex.value, appendLF: !autoSendHex.value })
     }
   }, autoSendInterval.value)
 }
@@ -205,8 +208,9 @@ const addQuickCommand = () => {
 }
 
 const sendQuickCommand = (cmd) => {
-  if (store.connected) {
-    store.send(cmd.data, { isHex: cmd.hex, appendLF: !cmd.hex })
+  const target = portsStore.ports.find(p => p.connected)
+  if (target) {
+    portsStore.sendToPort(target.id, cmd.data, { isHex: cmd.hex, appendLF: !cmd.hex })
   }
 }
 
@@ -237,7 +241,7 @@ const asciiTable = computed(() => {
 
 // ========== 字节统计 ==========
 const byteStats = computed(() => {
-  const logs = store.terminalLogs
+  const logs = portsStore.ports.flatMap(p => p.logs)
   let rxBytes = 0, txBytes = 0, rxCount = 0, txCount = 0
 
   logs.forEach(log => {
@@ -264,12 +268,16 @@ const exportFormat = ref('txt')
 const exportLog = () => {
   emit('export-log', { format: exportFormat.value })
 }
+
+const togglePortTerminalRx = (portId, enabled) => {
+  portsStore.setPortTerminalRx(portId, enabled)
+}
 </script>
 
 <template>
-  <aside class="w-80 bg-cat-card border-l border-cat-border flex flex-col shrink-0 overflow-hidden">
+  <aside class="w-[18rem] bg-cat-card border-l border-cat-border flex flex-col shrink-0 overflow-hidden">
     <!-- 标题栏 -->
-    <div class="h-12 px-4 flex items-center justify-between border-b border-cat-border shrink-0">
+    <div class="h-11 px-3 flex items-center justify-between border-b border-cat-border shrink-0">
       <span class="font-medium flex items-center gap-2">
         <span>🛠️</span> 终端设置
       </span>
@@ -279,10 +287,44 @@ const exportLog = () => {
     <!-- 可滚动内容 -->
     <div class="flex-1 overflow-y-auto">
 
+      <!-- 终端输出 -->
+      <div class="border-b border-cat-border">
+        <button @click="toggleCollapse('appearance')"
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          <div class="flex items-center gap-2">
+            <span>🧾</span>
+            <span class="font-medium text-sm">终端输出</span>
+          </div>
+          <span class="text-cat-muted text-xs transition-transform" :class="collapsed.appearance ? '' : 'rotate-180'">▼</span>
+        </button>
+        <div v-show="!collapsed.appearance" class="px-3 pb-3 space-y-2">
+          <div class="text-[11px] text-cat-muted">
+            高于 {{ portsStore.highBaudSilentThreshold.toLocaleString() }} 的端口默认关闭终端接收打印，避免高速数据把终端刷满。
+          </div>
+          <div v-for="port in portsStore.ports" :key="port.id" class="rounded-lg bg-cat-surface px-2.5 py-2 border border-cat-border/70">
+            <div class="flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <div class="text-sm text-cat-text truncate">{{ port.label }}</div>
+                <div class="text-[10px] text-cat-muted truncate">{{ port.baudRate }} · {{ port.portName || '未选择设备' }}</div>
+              </div>
+              <label class="flex items-center gap-1 text-[11px] text-cat-muted shrink-0 cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="port.showTerminalRx"
+                  @change="event => togglePortTerminalRx(port.id, event.target.checked)"
+                  class="accent-cat-primary"
+                >
+                打印
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 进制转换计算器 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('converter')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span class="text-cat-primary">🔢</span>
             <span class="font-medium text-sm">进制转换</span>
@@ -312,7 +354,7 @@ const exportLog = () => {
       <!-- 校验和计算器 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('checksum')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span class="text-cat-secondary">🔐</span>
             <span class="font-medium text-sm">校验和计算</span>
@@ -339,7 +381,7 @@ const exportLog = () => {
       <!-- 时间戳转换器 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('timestamp')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span class="text-cat-accent">⏰</span>
             <span class="font-medium text-sm">时间戳转换</span>
@@ -372,7 +414,7 @@ const exportLog = () => {
       <!-- 自动发送 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('autoSend')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span>🔄</span>
             <span class="font-medium text-sm">自动发送</span>
@@ -392,8 +434,8 @@ const exportLog = () => {
               <input type="checkbox" v-model="autoSendHex" class="accent-cat-primary"> HEX
             </label>
           </div>
-          <button @click="autoSendEnabled = !autoSendEnabled" :disabled="!store.connected"
-            :class="['w-full py-2 rounded text-sm font-medium', autoSendEnabled ? 'bg-red-500/20 text-red-400' : 'cat-btn', !store.connected ? 'opacity-50' : '']">
+          <button @click="autoSendEnabled = !autoSendEnabled" :disabled="!portsStore.anyConnected"
+            :class="['w-full py-2 rounded text-sm font-medium', autoSendEnabled ? 'bg-red-500/20 text-red-400' : 'cat-btn', !portsStore.anyConnected ? 'opacity-50' : '']">
             {{ autoSendEnabled ? '⏹️ 停止' : '▶️ 开始' }}
           </button>
         </div>
@@ -402,7 +444,7 @@ const exportLog = () => {
       <!-- 快捷指令 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('quickCmd')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span>⚡</span>
             <span class="font-medium text-sm">快捷指令</span>
@@ -413,7 +455,7 @@ const exportLog = () => {
           <div class="space-y-1 max-h-32 overflow-y-auto">
             <div v-for="(cmd, i) in quickCommands" :key="i"
               class="flex items-center gap-2 bg-cat-surface rounded px-2 py-1.5 group">
-              <button @click="sendQuickCommand(cmd)" :disabled="!store.connected"
+              <button @click="sendQuickCommand(cmd)" :disabled="!portsStore.anyConnected"
                 class="flex-1 text-left text-sm truncate hover:text-cat-primary disabled:opacity-50">
                 {{ cmd.name }}
               </button>
@@ -442,7 +484,7 @@ const exportLog = () => {
       <!-- ASCII码表 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('ascii')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span>📋</span>
             <span class="font-medium text-sm">ASCII码表</span>
@@ -468,7 +510,7 @@ const exportLog = () => {
       <!-- 字节统计 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('stats')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span>📊</span>
             <span class="font-medium text-sm">数据统计</span>
@@ -504,7 +546,7 @@ const exportLog = () => {
       <!-- 数据过滤 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('filter')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span>🔍</span>
             <span class="font-medium text-sm">数据过滤</span>
@@ -531,7 +573,7 @@ const exportLog = () => {
       <!-- 导出日志 -->
       <div class="border-b border-cat-border">
         <button @click="toggleCollapse('export')"
-          class="w-full p-3 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
+          class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors">
           <div class="flex items-center gap-2">
             <span>📥</span>
             <span class="font-medium text-sm">导出日志</span>

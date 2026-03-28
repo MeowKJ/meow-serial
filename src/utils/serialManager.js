@@ -4,7 +4,7 @@
  * 支持 Chrome 89+, Edge 89+
  */
 
-import { parseMmwavePacketsFromBuffer } from './mmwaveParser'
+import { getPortDisplayName } from './usbVendors'
 
 class SerialManager {
   constructor() {
@@ -40,7 +40,7 @@ class SerialManager {
     
     // 协议解析配置
     this.protocol = {
-      type: 'line',        // 'line' | 'length' | 'delimiter' | 'raw' | 'mmwave'
+      type: 'line',        // 'line' | 'length' | 'delimiter' | 'raw'
       delimiter: '\n',     // 行结束符
       length: 0,           // 固定长度
       timeout: 100,         // 超时时间(ms)
@@ -125,29 +125,7 @@ class SerialManager {
    * 根据设备信息生成端口名称
    */
   getPortName(info, index) {
-    // 常见USB转串口芯片的VID
-    const knownVendors = {
-      0x0403: 'FTDI',
-      0x067B: 'Prolific',
-      0x10C4: 'Silicon Labs',
-      0x1A86: 'CH340',
-      0x2341: 'Arduino',
-      0x239A: 'Adafruit',
-      0x303A: 'Espressif',
-      0x1366: 'SEGGER'
-    }
-    
-    const vendorName = knownVendors[info.usbVendorId] || ''
-    
-    if (vendorName) {
-      return `串口 ${index + 1} (${vendorName})`
-    }
-    
-    if (info.usbVendorId) {
-      return `串口 ${index + 1} (VID:${info.usbVendorId.toString(16).toUpperCase()})`
-    }
-    
-    return `串口 ${index + 1}`
+    return getPortDisplayName(info, index)
   }
   
   /**
@@ -384,11 +362,6 @@ class SerialManager {
         this.processLengthData(data)
         break
 
-      case 'mmwave':
-        // TI mmWave 二进制数据包
-        this.processMmwaveData(data)
-        break
-
       default:
         // 默认行为：根据 waitForLF 决定
         if (this.protocol.waitForLF) {
@@ -440,8 +413,7 @@ class SerialManager {
         this.onData({
           raw: new TextEncoder().encode(processedLine),
           text: processedLine,
-          timestamp: Date.now(),
-          parsed: this.parseLine(processedLine)
+          timestamp: Date.now()
         })
       }
     }
@@ -449,32 +421,6 @@ class SerialManager {
     // 保留未完成的数据
     const remaining = lines[lines.length - 1]
     this.buffer = new TextEncoder().encode(remaining)
-  }
-  
-  /**
-   * 解析数据行
-   */
-  parseLine(line) {
-    // 尝试解析为 CSV 数值
-    const values = line.split(/[,\t;]/).map(v => {
-      const num = parseFloat(v.trim())
-      return isNaN(num) ? null : num
-    }).filter(v => v !== null)
-    
-    if (values.length > 0) {
-      return { type: 'values', data: values }
-    }
-    
-    // 尝试解析为 JSON
-    try {
-      const json = JSON.parse(line)
-      return { type: 'json', data: json }
-    } catch {
-      // 不是 JSON
-    }
-    
-    // 普通文本
-    return { type: 'text', data: line }
   }
   
   /**
@@ -543,26 +489,6 @@ class SerialManager {
     }
   }
 
-  /**
-   * TI mmWave 二进制数据处理
-   */
-  processMmwaveData(data) {
-    const { packets, remainingBuffer } = parseMmwavePacketsFromBuffer(this.buffer, data)
-    this.buffer = remainingBuffer
-
-    packets.forEach(packet => {
-      this.stats.packetsReceived++
-      if (this.onData) {
-        this.onData({
-          raw: packet.rawBytes || null,
-          text: packet.summary,
-          timestamp: Date.now(),
-          parsed: packet
-        })
-      }
-    })
-  }
-  
   /**
    * 发送数据
    */

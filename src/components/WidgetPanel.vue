@@ -1,13 +1,15 @@
 <script setup>
 import { useSerialStore } from '../stores/serial'
+import { getWidgetDefaults } from '../widgets'
 
 const store = useSerialStore()
 const emit = defineEmits(['close'])
 
 const widgetTypes = [
   { type: 'waveform', name: '波形图', icon: '📈', desc: '多通道实时波形', defaultW: 400, defaultH: 200 },
+  { type: 'sparkline', name: '迷你波形图', icon: '〰️', desc: '单通道迷你趋势线', defaultW: 180, defaultH: 72 },
   { type: 'fft', name: 'FFT频谱', icon: '📊', desc: '频谱分析', defaultW: 300, defaultH: 180 },
-  { type: 'value', name: '数值显示', icon: '🔢', desc: '大字体数值', defaultW: 150, defaultH: 100 },
+  { type: 'value', name: '数值显示', icon: '🔢', desc: '大字体数值', defaultW: 220, defaultH: 140 },
   { type: 'gauge', name: '仪表盘', icon: '⏱️', desc: '圆弧仪表', defaultW: 150, defaultH: 130 },
   { type: 'button', name: '按钮', icon: '🔘', desc: '发送命令', defaultW: 140, defaultH: 70 },
   { type: 'slider', name: '滑块', icon: '🎚️', desc: '参数调节', defaultW: 200, defaultH: 80 },
@@ -19,19 +21,9 @@ const widgetTypes = [
 
 const addWidget = (widgetType) => {
   store.addWidget({
-    type: widgetType.type,
-    title: widgetType.name,
+    ...getWidgetDefaults(widgetType.type),
     x: 50 + Math.random() * 100,
-    y: 50 + Math.random() * 100,
-    w: widgetType.defaultW,
-    h: widgetType.defaultH,
-    channel: 0,
-    label: '按钮喵',
-    command: '',
-    unit: '',
-    value: 50,
-    min: 0,
-    max: 100
+    y: 50 + Math.random() * 100
   })
   emit('close')
 }

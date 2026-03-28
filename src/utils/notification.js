@@ -18,7 +18,7 @@ class NotificationManager {
     if (!this.container) {
       this.container = document.createElement('div')
       this.container.id = 'cat-notification-container'
-      this.container.className = 'fixed top-4 right-4 z-50 space-y-2 pointer-events-none'
+      this.container.className = 'fixed top-3 right-3 z-[90] flex w-[min(24rem,calc(100vw-1.5rem))] flex-col gap-2 pointer-events-none'
       document.body.appendChild(this.container)
     }
   }

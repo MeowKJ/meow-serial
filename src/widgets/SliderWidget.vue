@@ -1,12 +1,12 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { useSerialStore } from '../stores/serial'
+import { ref, watch, computed } from 'vue'
+import { usePortsStore } from '../stores/ports'
 
 const props = defineProps({
   widget: Object
 })
 
-const store = useSerialStore()
+const portsStore = usePortsStore()
 const currentValue = ref(props.widget.value || 50)
 
 // 计算百分比
@@ -16,23 +16,24 @@ const percentage = computed(() => {
   return ((currentValue.value - min) / (max - min)) * 100
 })
 
-// 发送命令
+// 发送命令到第一个已连接端口
 const sendValue = () => {
-  if (!store.connected) return
-  
-  const command = props.widget.command 
+  if (!portsStore.anyConnected) return
+
+  const command = props.widget.command
     ? props.widget.command.replace('{value}', currentValue.value.toString())
     : `SET:${currentValue.value}`
-  
-  store.send(command, false)
+
+  const target = portsStore.ports.find(p => p.connected)
+  if (target) {
+    portsStore.sendToPort(target.id, command, { appendCR: false, appendLF: true })
+  }
 }
 
 // 监听值变化
 watch(currentValue, (newVal) => {
   props.widget.value = newVal
 })
-
-import { computed } from 'vue'
 </script>
 
 <template>

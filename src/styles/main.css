@@ -87,22 +87,7 @@ body {
 
 /* 控件选中状态 */
 .widget-selected {
-  outline: 2px solid var(--cat-primary);
-  outline-offset: 2px;
-}
-
-/* 缩放手柄 */
-.resize-handle {
-  position: absolute;
-  background: var(--cat-primary);
-  border-radius: 2px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.widget-container:hover .resize-handle,
-.widget-selected .resize-handle {
-  opacity: 1;
+  outline: none;
 }
 
 /* 网格背景 */

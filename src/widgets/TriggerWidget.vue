@@ -1,12 +1,14 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useSerialStore } from '../stores/serial'
+import { usePortsStore } from '../stores/ports'
 
 const props = defineProps({
   widget: Object
 })
 
 const store = useSerialStore()
+const portsStore = usePortsStore()
 
 // 触发状态
 const triggered = ref(false)
@@ -52,8 +54,11 @@ const checkTrigger = () => {
     lastTriggerTime.value = new Date().toLocaleTimeString()
     
     // 执行动作
-    if (props.widget.action && store.connected) {
-      store.send(props.widget.action, false)
+    if (props.widget.action && portsStore.anyConnected) {
+      const target = portsStore.ports.find(p => p.connected)
+      if (target) {
+        portsStore.sendToPort(target.id, props.widget.action, { appendCR: false, appendLF: true })
+      }
     }
   } else if (!shouldTrigger) {
     triggered.value = false

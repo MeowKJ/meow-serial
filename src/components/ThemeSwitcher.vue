@@ -1,8 +1,10 @@
 <script setup>
 import { computed } from 'vue'
 import { useThemeStore } from '../stores/theme'
+import { useRenderingStore } from '../stores/rendering'
 
 const themeStore = useThemeStore()
+const renderingStore = useRenderingStore()
 
 // 深色/浅色模式切换
 const toggleDarkMode = () => {
@@ -18,6 +20,12 @@ const modeIcon = computed(() => {
 const modeName = computed(() => {
   return themeStore.isDark ? '深色' : '浅色'
 })
+
+const renderingModes = [
+  { key: 'auto', label: '自动' },
+  { key: 'on', label: '增强' },
+  { key: 'off', label: '省电' }
+]
 </script>
 
 <template>
@@ -32,7 +40,7 @@ const modeName = computed(() => {
 
       <!-- 主题下拉菜单 -->
       <div
-        class="absolute right-0 top-full mt-2 w-40 bg-cat-card border border-cat-border rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
+        class="absolute right-0 top-full mt-2 w-52 bg-cat-card border border-cat-border rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
         <div class="p-1">
           <button v-for="theme in themeStore.themeList" :key="theme.key" @click="themeStore.setTheme(theme.key)" :class="[
             'w-full px-3 py-2 rounded-lg text-sm text-left flex items-center gap-2 transition-colors',
@@ -45,6 +53,27 @@ const modeName = computed(() => {
             <span>{{ (themeStore.isDark && theme.key === 'ragdoll') ? (theme.darkName || '黑猫') : theme.name }}</span>
             <span v-if="themeStore.currentTheme === theme.key" class="ml-auto text-xs">✓</span>
           </button>
+        </div>
+
+        <div class="border-t border-cat-border/70 px-3 py-2">
+          <div class="mb-2 flex items-center justify-between text-[11px] text-cat-muted">
+            <span>渲染加速</span>
+            <span>{{ renderingStore.statusText }}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1">
+            <button
+              v-for="mode in renderingModes"
+              :key="mode.key"
+              @click="renderingStore.setMode(mode.key)"
+              :class="[
+                'rounded-lg px-2 py-1.5 text-xs font-medium transition-colors',
+                renderingStore.mode === mode.key
+                  ? 'bg-cat-primary/20 text-cat-primary'
+                  : 'bg-cat-surface text-cat-muted hover:bg-cat-border hover:text-cat-text'
+              ]">
+              {{ mode.label }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

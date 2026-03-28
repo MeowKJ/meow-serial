@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useSerialStore } from './stores/serial'
+import { usePortsStore } from './stores/ports'
 
 // Components
 import HeaderBar from './components/HeaderBar.vue'
@@ -8,28 +9,26 @@ import Sidebar from './components/Sidebar.vue'
 import CanvasView from './components/CanvasView.vue'
 import TerminalView from './components/TerminalView.vue'
 import ProtocolView from './components/ProtocolView.vue'
-import ReplayView from './components/ReplayView.vue'
 import WidgetPanel from './components/WidgetPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import TerminalSettingsPanel from './components/TerminalSettingsPanel.vue'
 import ContextMenu from './components/ContextMenu.vue'
-import CatMascot from './components/CatMascot.vue'
 
 const store = useSerialStore()
+const portsStore = usePortsStore()
 
 // 界面状态
 const activeTab = ref('canvas')
 const tabs = [
   { id: 'canvas', name: '画布喵', icon: '🎨' },
   { id: 'terminal', name: '终端喵', icon: '🖥️' },
-  { id: 'protocol', name: '协议喵', icon: '📋' },
-  { id: 'replay', name: '回放喵', icon: '🎬' }
+  { id: 'protocol', name: '协议喵', icon: '📋' }
 ]
 
 const isPaused = ref(false)
 const isRecording = ref(false)
 const showWidgetPanel = ref(false)
-const showSettingsPanel = ref(true)
+const showSettingsPanel = ref(false)
 const showTerminalSettings = ref(true)
 const selectedWidgetId = ref(null)
 
@@ -46,6 +45,12 @@ const selectedWidget = computed(() => {
   return store.widgets.find(w => w.id === selectedWidgetId.value)
 })
 
+watch(selectedWidgetId, (widgetId) => {
+  if (widgetId === null) {
+    showSettingsPanel.value = false
+  }
+})
+
 // 方法
 const clearAll = () => {
   store.clearAll()
@@ -55,9 +60,118 @@ const closeContextMenu = () => {
   contextMenu.value.visible = false
 }
 
-// 导出日志
+const getSparklineDrawMode = (widget) => {
+  if (!widget || widget.type !== 'sparkline') return 'window'
+  if (widget.drawMode === 'window') return 'window'
+  if (widget.drawMode === 'trend') return 'trend'
+  return widget.fullHistory === false ? 'window' : 'trend'
+}
+
+const openWidgetContextMenu = ({ widgetId, x, y }) => {
+  const widget = store.widgets.find(item => item.id === widgetId)
+  if (!widget) return
+
+  const isSparklineTrend = widget.type === 'sparkline' && getSparklineDrawMode(widget) === 'trend'
+  const items = [
+    {
+      icon: '⚙️',
+      label: '编辑控件',
+      action: () => {
+        activeTab.value = 'canvas'
+        showSettingsPanel.value = true
+      }
+    },
+    {
+      icon: '📄',
+      label: '复制控件',
+      action: () => {
+        const duplicated = store.duplicateWidget(widgetId)
+        if (duplicated) {
+          selectedWidgetId.value = duplicated.id
+          showSettingsPanel.value = true
+        }
+      }
+    }
+  ]
+
+  if (isSparklineTrend) {
+    items.push(
+      { divider: true },
+      {
+        icon: '🧹',
+        label: '清空趋势数据',
+        action: () => {
+          store.clearChannelHistory(widget.channel)
+        }
+      }
+    )
+  }
+
+  items.push(
+    { divider: true },
+    {
+      icon: '⬆️',
+      label: '置于顶层',
+      action: () => store.bringWidgetToFront(widgetId)
+    },
+    {
+      icon: '⬇️',
+      label: '置于底层',
+      action: () => store.sendWidgetToBack(widgetId)
+    },
+    { divider: true },
+    {
+      icon: '🗑️',
+      label: '删除控件',
+      danger: true,
+      action: () => {
+        store.removeWidget(widgetId)
+        if (selectedWidgetId.value === widgetId) {
+          selectedWidgetId.value = null
+          showSettingsPanel.value = false
+        }
+      }
+    }
+  )
+
+  selectedWidgetId.value = widgetId
+  contextMenu.value = {
+    visible: true,
+    x,
+    y,
+    items
+  }
+}
+
+const openCanvasContextMenu = ({ x, y }) => {
+  selectedWidgetId.value = null
+  contextMenu.value = {
+    visible: true,
+    x,
+    y,
+    items: [
+      {
+        icon: '🧩',
+        label: '添加控件',
+        action: () => {
+          activeTab.value = 'canvas'
+          showWidgetPanel.value = true
+        }
+      }
+    ]
+  }
+}
+
+// 导出日志 — 合并所有端口日志
 const handleExportLog = ({ format }) => {
-  const logs = store.terminalLogs
+  const allLogs = []
+  for (const p of portsStore.ports) {
+    for (const log of p.logs) {
+      allLogs.push({ ...log, _portLabel: p.label })
+    }
+  }
+  allLogs.sort((a, b) => a.id - b.id)
+  const logs = allLogs
   let content = ''
   let filename = `serial_log_${new Date().toISOString().slice(0,19).replace(/[:-]/g, '')}`
 
@@ -99,10 +213,16 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col overflow-hidden">
+  <div class="h-screen flex flex-col overflow-hidden bg-cat-bg">
     <!-- 顶部栏 -->
     <HeaderBar 
+      :tabs="tabs"
+      :active-tab="activeTab"
+      :is-paused="isPaused"
       :is-recording="isRecording"
+      @set-tab="activeTab = $event"
+      @toggle-pause="isPaused = !isPaused"
+      @clear-all="clearAll"
       @toggle-recording="isRecording = !isRecording"
       @show-widget-panel="showWidgetPanel = true"
     />
@@ -114,56 +234,26 @@ onMounted(() => {
 
       <!-- 中间内容区 -->
       <main class="flex-1 flex flex-col overflow-hidden">
-        <!-- 标签页 -->
-        <div class="h-10 bg-cat-card border-b border-cat-border flex items-center px-2 shrink-0">
-          <button 
-            v-for="tab in tabs" 
-            :key="tab.id" 
-            @click="activeTab = tab.id"
-            :class="[
-              'px-4 py-2 text-sm rounded-lg mr-1 flex items-center gap-2 smooth-transition',
-              activeTab === tab.id 
-                ? 'bg-cat-surface text-cat-text' 
-                : 'text-cat-muted hover:text-cat-text hover:bg-cat-surface/50'
-            ]"
-          >
-            <span>{{ tab.icon }}</span>
-            {{ tab.name }}
-          </button>
-          
-          <!-- 运行控制 -->
-          <div class="ml-auto flex items-center gap-2">
-            <button 
-              @click="isPaused = !isPaused" 
-              :class="[
-                'px-3 py-1.5 rounded-lg text-sm flex items-center gap-1', 
-                isPaused ? 'bg-yellow-500/20 text-yellow-400' : 'cat-btn-secondary'
-              ]"
-            >
-              {{ isPaused ? '▶️ 继续' : '⏸️ 暂停' }}
-            </button>
-            <button @click="clearAll" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-sm">
-              🗑️ 清空
-            </button>
-          </div>
-        </div>
-
         <!-- 内容区域 -->
         <div class="flex-1 overflow-hidden">
           <CanvasView 
             v-show="activeTab === 'canvas'" 
             v-model:selected-widget="selectedWidgetId"
-            @show-settings="showSettingsPanel = true"
+            @show-context-menu="openWidgetContextMenu"
+            @show-canvas-context-menu="openCanvasContextMenu"
           />
-          <TerminalView v-show="activeTab === 'terminal'" />
+          <TerminalView
+            v-show="activeTab === 'terminal'"
+            :settings-visible="showTerminalSettings"
+            @toggle-settings="showTerminalSettings = !showTerminalSettings"
+          />
           <ProtocolView v-show="activeTab === 'protocol'" />
-          <ReplayView v-show="activeTab === 'replay'" />
         </div>
       </main>
 
       <!-- 右侧设置面板 - 根据标签页显示不同面板 -->
       <SettingsPanel
-        v-if="showSettingsPanel && activeTab === 'canvas'"
+        v-if="showSettingsPanel && activeTab === 'canvas' && selectedWidget"
         :widget="selectedWidget"
         @close="showSettingsPanel = false"
         @delete="selectedWidgetId = null"
@@ -189,8 +279,5 @@ onMounted(() => {
       :items="contextMenu.items"
       @close="closeContextMenu"
     />
-
-    <!-- 猫咪助手 -->
-    <CatMascot :connected="store.connected" />
   </div>
 </template>

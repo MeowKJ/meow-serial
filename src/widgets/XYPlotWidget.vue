@@ -1,7 +1,13 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useSerialStore } from '../stores/serial'
 import { useThemeStore } from '../stores/theme'
+import { useRenderingStore } from '../stores/rendering'
+import {
+  createRafLoop,
+  getAccelerated2DContext,
+  resizeCanvasToContainer
+} from '../utils/canvasAcceleration'
 
 const props = defineProps({
   widget: Object
@@ -9,9 +15,11 @@ const props = defineProps({
 
 const store = useSerialStore()
 const themeStore = useThemeStore()
+const renderingStore = useRenderingStore()
 const canvasRef = ref(null)
+const resizeObserver = ref(null)
 let ctx = null
-let animationId = null
+let rafLoop = null
 
 // 获取主题颜色
 const themePrimary = computed(() => {
@@ -35,9 +43,14 @@ const draw = () => {
   if (!canvasRef.value || !ctx) return
 
   const canvas = canvasRef.value
-  const { width, height } = canvas
+  const dpr = canvas.width / Math.max(canvas.clientWidth || 1, 1)
+  const width = canvas.width / dpr
+  const height = canvas.height / dpr
 
   // 清空背景 - 使用CSS变量
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.scale(dpr, dpr)
   const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--cat-bg').trim() || '#1C1C1E'
   ctx.fillStyle = bgColor
   ctx.fillRect(0, 0, width, height)
@@ -63,7 +76,6 @@ const draw = () => {
   const data = store.dataHistory.slice(-200)
 
   if (data.length < 2) {
-    animationId = requestAnimationFrame(draw)
     return
   }
 
@@ -116,8 +128,6 @@ const draw = () => {
     ctx.arc(x, y, 8, 0, Math.PI * 2)
     ctx.stroke()
   }
-
-  animationId = requestAnimationFrame(draw)
 }
 
 // 初始化Canvas
@@ -126,22 +136,33 @@ const initCanvas = () => {
 
   const canvas = canvasRef.value
   const container = canvas.parentElement
-  canvas.width = container.clientWidth
-  canvas.height = container.clientHeight
-  ctx = canvas.getContext('2d')
+  if (!container) return
 
-  draw()
+  resizeCanvasToContainer(canvas, container, renderingStore)
+  ctx = getAccelerated2DContext(canvas, renderingStore)
 }
 
 onMounted(() => {
-  setTimeout(initCanvas, 50)
+  setTimeout(() => {
+    initCanvas()
+    if (canvasRef.value?.parentElement) {
+      resizeObserver.value = new ResizeObserver(() => initCanvas())
+      resizeObserver.value.observe(canvasRef.value.parentElement)
+    }
+    rafLoop = createRafLoop(draw, renderingStore)
+    rafLoop.start()
+  }, 50)
 })
 
 onUnmounted(() => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-  }
+  rafLoop?.stop()
+  resizeObserver.value?.disconnect()
 })
+
+watch(
+  () => [renderingStore.mode, renderingStore.qualityPreset.maxDpr, renderingStore.qualityPreset.desynchronized],
+  () => initCanvas()
+)
 </script>
 
 <template>

@@ -46,14 +46,28 @@ const serializeChannel = (channel) => ({
   name: channel.name,
   color: channel.color,
   enabled: channel.enabled,
-  value: channel.value ?? 0
+  value: channel.value ?? 0,
+  portId: channel.portId || '',
+  autoCreated: channel.autoCreated === true,
+  sourceKey: channel.sourceKey || ''
 })
 
-const serializeWorkspace = ({ widgets = [], channels = [], protocol = {}, canvas = {} }) => ({
+const serializeWorkspace = ({
+  widgets = [],
+  channels = [],
+  protocol = {},
+  protocolProfiles = [],
+  theme = {},
+  canvas = {},
+  ports = []
+}) => ({
   widgets: widgets.map(serializeWidget),
   channels: channels.map(serializeChannel),
   protocol: cloneJsonSafe(protocol),
+  protocolProfiles: Array.isArray(protocolProfiles) ? cloneJsonSafe(protocolProfiles) : [],
+  theme: cloneJsonSafe(theme),
   canvas: cloneJsonSafe(canvas),
+  ports: Array.isArray(ports) ? cloneJsonSafe(ports) : [],
   savedAt: Date.now()
 })
 
@@ -132,6 +146,7 @@ export const loadProtocolConfig = () => {
 // 导出配置到文件
 export const exportConfig = (filename = 'meow_config.json') => {
   const config = {
+    version: 2,
     layouts: loadFromStorage('layouts', {}),
     workspace: loadWorkspace(),
     connection: loadFromStorage('connection', {}),

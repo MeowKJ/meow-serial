@@ -14,6 +14,7 @@ export { default as TriggerWidget } from './TriggerWidget.vue'
 export { default as CalculatorWidget } from './CalculatorWidget.vue'
 export { default as HistogramWidget } from './HistogramWidget.vue'
 export { default as XYPlotWidget } from './XYPlotWidget.vue'
+export { default as SparklineWidget } from './SparklineWidget.vue'
 
 // 控件类型配置
 export const widgetTypes = [
@@ -27,6 +28,17 @@ export const widgetTypes = [
     defaultH: 200,
     minW: 200,
     minH: 100
+  },
+  {
+    type: 'sparkline',
+    name: '迷你波形图',
+    icon: '〰️',
+    desc: '单通道迷你趋势线',
+    category: '显示',
+    defaultW: 180,
+    defaultH: 72,
+    minW: 110,
+    minH: 48
   },
   { 
     type: 'fft', 
@@ -67,10 +79,10 @@ export const widgetTypes = [
     icon: '🔢', 
     desc: '大字体数值', 
     category: '显示',
-    defaultW: 150, 
-    defaultH: 100,
-    minW: 100,
-    minH: 60
+    defaultW: 220, 
+    defaultH: 140,
+    minW: 140,
+    minH: 90
   },
   { 
     type: 'gauge', 
@@ -217,6 +229,14 @@ export const getWidgetDefaults = (type) => {
     case 'histogram':
       defaults.bins = 20
       break
+    case 'fft':
+      defaults.channel = 0
+      defaults.fftSize = 128
+      defaults.minFreq = 0
+      defaults.maxFreq = 2
+      defaults.sampleRateHz = 0
+      defaults.unit = 'Hz'
+      break
     case 'xyplot':
       defaults.xChannel = 0
       defaults.yChannel = 1
@@ -231,6 +251,14 @@ export const getWidgetDefaults = (type) => {
         channelIds: [0, 1, 2]
       }
       defaults.channels = [0, 1, 2]
+      break
+    case 'sparkline':
+      defaults.channel = 0
+      defaults.drawMode = 'trend'
+      defaults.fullHistory = true
+      defaults.historyLength = 120
+      defaults.precision = 2
+      defaults.unit = ''
       break
   }
   

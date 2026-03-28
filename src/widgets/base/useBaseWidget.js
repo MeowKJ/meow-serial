@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useSerialStore } from '../../stores/serial'
+import { usePortsStore } from '../../stores/ports'
 
 /**
  * 基础控件 Composable
@@ -7,6 +8,7 @@ import { useSerialStore } from '../../stores/serial'
  */
 export function useBaseWidget(widget) {
   const store = useSerialStore()
+  const portsStore = usePortsStore()
 
   // ===== 基础属性 =====
 
@@ -111,6 +113,10 @@ export function useBaseWidget(widget) {
     return store.dataHistory.slice(-limit)
   }
 
+  const getFullHistoryData = () => {
+    return store.fullDataHistory
+  }
+
   /**
    * 控件是否可见
    */
@@ -122,7 +128,7 @@ export function useBaseWidget(widget) {
    * 控件是否启用
    */
   const isEnabled = computed(() => {
-    return widget.value?.enabled !== false && store.connected
+    return widget.value?.enabled !== false && portsStore.anyConnected
   })
 
   /**
@@ -163,6 +169,7 @@ export function useBaseWidget(widget) {
     getChannelsData,
     getDataSourceData,
     getHistoryData,
+    getFullHistoryData,
     
     // Store引用
     store

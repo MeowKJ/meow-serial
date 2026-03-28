@@ -1,29 +1,39 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
-import { useSerialStore } from '../stores/serial'
+import { usePortsStore } from '../stores/ports'
 
 const props = defineProps({
   widget: Object
 })
 
-const store = useSerialStore()
+const portsStore = usePortsStore()
 const scrollContainer = ref(null)
 const inputValue = ref('')
 
-// 显示最近的日志
+// 合并所有端口日志，显示最近30条
 const recentLogs = computed(() => {
-  return store.terminalLogs.slice(-30)
+  const allLogs = []
+  for (const p of portsStore.ports) {
+    for (const log of p.logs) {
+      allLogs.push(log)
+    }
+  }
+  allLogs.sort((a, b) => a.id - b.id)
+  return allLogs.slice(-30)
 })
 
-// 发送数据
+// 发送数据到第一个已连接端口
 const sendData = () => {
-  if (!inputValue.value.trim() || !store.connected) return
-  store.send(inputValue.value, false)
+  if (!inputValue.value.trim() || !portsStore.anyConnected) return
+  const target = portsStore.ports.find(p => p.connected)
+  if (target) {
+    portsStore.sendToPort(target.id, inputValue.value, { appendCR: false, appendLF: true })
+  }
   inputValue.value = ''
 }
 
 // 自动滚动
-watch(() => store.terminalLogs.length, async () => {
+watch(() => recentLogs.value.length, async () => {
   await nextTick()
   if (scrollContainer.value) {
     scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight
@@ -66,13 +76,13 @@ watch(() => store.terminalLogs.length, async () => {
       <input
         v-model="inputValue"
         @keyup.enter="sendData"
-        :disabled="!store.connected"
+        :disabled="!portsStore.anyConnected"
         placeholder="输入命令..."
         class="flex-1 bg-cat-surface border border-cat-border rounded px-2 py-1 text-xs disabled:opacity-50"
       />
       <button
         @click="sendData"
-        :disabled="!store.connected"
+        :disabled="!portsStore.anyConnected"
         class="px-2 py-1 bg-cat-primary/20 text-cat-primary rounded text-xs hover:bg-cat-primary/30 disabled:opacity-50"
       >
         发送

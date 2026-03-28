@@ -1,6 +1,7 @@
 <script setup>
 import { computed, provide } from 'vue'
 import { useSerialStore } from '../../stores/serial'
+import { usePortsStore } from '../../stores/ports'
 
 /**
  * 基础控件组件
@@ -24,6 +25,7 @@ const props = defineProps({
 })
 
 const store = useSerialStore()
+const portsStore = usePortsStore()
 
 // ===== 基础属性 =====
 
@@ -139,7 +141,7 @@ const isVisible = computed(() => {
  * 控件是否启用
  */
 const isEnabled = computed(() => {
-  return props.widget.enabled !== false && store.connected
+  return props.widget.enabled !== false && portsStore.anyConnected
 })
 
 /**

@@ -1,6 +1,12 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import { useBaseWidget } from './base'
+import { useRenderingStore } from '../stores/rendering'
+import {
+  createRafLoop,
+  getAccelerated2DContext,
+  resizeCanvasToContainer
+} from '../utils/canvasAcceleration'
 
 const props = defineProps({
   widget: Object
@@ -8,10 +14,11 @@ const props = defineProps({
 
 const widgetRef = toRef(props, 'widget')
 const { getChannelsData, getHistoryData, store } = useBaseWidget(widgetRef)
+const renderingStore = useRenderingStore()
 const canvasRef = ref(null)
 const highlightedChannelId = ref(props.widget?.selectedChannelId ?? null)
 let ctx = null
-let animationId = null
+let rafLoop = null
 let lastRenderState = {
   plot: null,
   linePoints: [],
@@ -39,13 +46,7 @@ const widgetUnit = computed(() => {
 
 const axisTitle = computed(() => props.widget?.yAxisLabel || '数值')
 
-const isTemperatureWaveform = computed(() => {
-  const title = props.widget?.title || ''
-  const channels = Array.isArray(props.widget?.channels) ? props.widget.channels : []
-  return title === '温度曲线' || (channels.length === 1 && channels[0] === 18)
-})
-
-const isFullHistoryWidget = computed(() => Boolean(props.widget?.fullHistory || isTemperatureWaveform.value))
+const isFullHistoryWidget = computed(() => Boolean(props.widget?.fullHistory))
 
 const simplifyHistory = (history, targetPoints) => {
   if (!Array.isArray(history) || history.length <= targetPoints) {
@@ -377,18 +378,20 @@ const draw = () => {
   if (!canvasRef.value || !ctx) return
 
   const canvas = canvasRef.value
-  const displayWidth = canvas.clientWidth
-  const displayHeight = canvas.clientHeight
+  const dpr = canvas.width / Math.max(canvas.clientWidth || 1, 1)
+  const displayWidth = canvas.width / dpr
+  const displayHeight = canvas.height / dpr
   const bgColor = getCssVar('--cat-bg', '#1C1C1E')
   const history = getVisibleHistory(displayWidth)
   const channels = selectedChannels.value
 
-  ctx.clearRect(0, 0, displayWidth, displayHeight)
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.scale(dpr, dpr)
   ctx.fillStyle = bgColor
   ctx.fillRect(0, 0, displayWidth, displayHeight)
 
   if (history.length < 2 || channels.length === 0) {
-    animationId = requestAnimationFrame(draw)
     return
   }
 
@@ -412,10 +415,8 @@ const draw = () => {
     plot,
     linePoints,
     legendBoxes,
-    dpr: window.devicePixelRatio || 1
+    dpr
   }
-
-  animationId = requestAnimationFrame(draw)
 }
 
 const setHighlightedChannel = (channelId) => {
@@ -489,43 +490,47 @@ const initCanvas = () => {
 
   const canvas = canvasRef.value
   const container = canvas.parentElement
-  const dpr = window.devicePixelRatio || 1
+  if (!container) return
 
-  canvas.width = Math.floor(container.clientWidth * dpr)
-  canvas.height = Math.floor(container.clientHeight * dpr)
-  canvas.style.width = `${container.clientWidth}px`
-  canvas.style.height = `${container.clientHeight}px`
-
-  ctx = canvas.getContext('2d')
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  draw()
+  resizeCanvasToContainer(canvas, container, renderingStore)
+  ctx = getAccelerated2DContext(canvas, renderingStore)
 }
 
 const resizeObserver = ref(null)
 
 onMounted(() => {
-  setTimeout(initCanvas, 50)
+  setTimeout(() => {
+    initCanvas()
 
-  resizeObserver.value = new ResizeObserver(() => {
-    if (canvasRef.value) initCanvas()
-  })
+    resizeObserver.value = new ResizeObserver(() => {
+      if (canvasRef.value) initCanvas()
+    })
 
-  if (canvasRef.value?.parentElement) {
-    resizeObserver.value.observe(canvasRef.value.parentElement)
-  }
+    if (canvasRef.value?.parentElement) {
+      resizeObserver.value.observe(canvasRef.value.parentElement)
+    }
 
-  if (canvasRef.value) {
-    canvasRef.value.addEventListener('click', onCanvasClick)
-  }
+    if (canvasRef.value) {
+      canvasRef.value.addEventListener('click', onCanvasClick)
+    }
+
+    rafLoop = createRafLoop(draw, renderingStore)
+    rafLoop.start()
+  }, 50)
 })
 
 onUnmounted(() => {
-  if (animationId) cancelAnimationFrame(animationId)
+  rafLoop?.stop()
   if (resizeObserver.value) resizeObserver.value.disconnect()
   if (canvasRef.value) {
     canvasRef.value.removeEventListener('click', onCanvasClick)
   }
 })
+
+watch(
+  () => [renderingStore.mode, renderingStore.qualityPreset.maxDpr, renderingStore.qualityPreset.desynchronized],
+  () => initCanvas()
+)
 </script>
 
 <template>
