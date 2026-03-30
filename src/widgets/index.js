@@ -1,5 +1,6 @@
 // 基础控件
 export * from './base'
+import { tStatic } from '../i18n'
 
 // 控件组件索引
 export { default as WaveformWidget } from './WaveformWidget.vue'
@@ -20,7 +21,10 @@ export { default as SparklineWidget } from './SparklineWidget.vue'
 export const widgetTypes = [
   { 
     type: 'waveform', 
+    nameKey: 'widgets.waveform.name',
+    descKey: 'widgets.waveform.desc',
     name: '波形图', 
+    emojiName: 'chartIncreasing',
     icon: '📈', 
     desc: '多通道实时波形', 
     category: '显示',
@@ -31,7 +35,10 @@ export const widgetTypes = [
   },
   {
     type: 'sparkline',
+    nameKey: 'widgets.sparkline.name',
+    descKey: 'widgets.sparkline.desc',
     name: '迷你波形图',
+    emojiName: 'chartIncreasing',
     icon: '〰️',
     desc: '单通道迷你趋势线',
     category: '显示',
@@ -42,7 +49,10 @@ export const widgetTypes = [
   },
   { 
     type: 'fft', 
+    nameKey: 'widgets.fft.name',
+    descKey: 'widgets.fft.desc',
     name: 'FFT频谱', 
+    emojiName: 'barChart',
     icon: '📊', 
     desc: '频谱分析', 
     category: '显示',
@@ -53,7 +63,10 @@ export const widgetTypes = [
   },
   { 
     type: 'histogram', 
+    nameKey: 'widgets.histogram.name',
+    descKey: 'widgets.histogram.desc',
     name: '直方图', 
+    emojiName: 'antennaBars',
     icon: '📶', 
     desc: '数据分布统计', 
     category: '显示',
@@ -64,6 +77,8 @@ export const widgetTypes = [
   },
   { 
     type: 'xyplot', 
+    nameKey: 'widgets.xyplot.name',
+    descKey: 'widgets.xyplot.desc',
     name: 'XY散点图', 
     icon: '⚬', 
     desc: '双通道相关性', 
@@ -75,7 +90,10 @@ export const widgetTypes = [
   },
   { 
     type: 'value', 
+    nameKey: 'widgets.value.name',
+    descKey: 'widgets.value.desc',
     name: '数值显示', 
+    emojiName: 'inputNumbers',
     icon: '🔢', 
     desc: '大字体数值', 
     category: '显示',
@@ -86,7 +104,10 @@ export const widgetTypes = [
   },
   { 
     type: 'gauge', 
+    nameKey: 'widgets.gauge.name',
+    descKey: 'widgets.gauge.desc',
     name: '仪表盘', 
+    emojiName: 'stopwatch',
     icon: '⏱️', 
     desc: '圆弧仪表', 
     category: '显示',
@@ -97,18 +118,24 @@ export const widgetTypes = [
   },
   { 
     type: 'button', 
+    nameKey: 'widgets.button.name',
+    descKey: 'widgets.button.desc',
     name: '按钮', 
+    emojiName: 'radioButton',
     icon: '🔘', 
     desc: '发送命令', 
     category: '控制',
-    defaultW: 140, 
-    defaultH: 70,
-    minW: 100,
-    minH: 50
+    defaultW: 180, 
+    defaultH: 88,
+    minW: 128,
+    minH: 64
   },
   { 
     type: 'slider', 
+    nameKey: 'widgets.slider.name',
+    descKey: 'widgets.slider.desc',
     name: '滑块', 
+    emojiName: 'levelSlider',
     icon: '🎚️', 
     desc: '参数调节', 
     category: '控制',
@@ -119,7 +146,10 @@ export const widgetTypes = [
   },
   { 
     type: 'led', 
+    nameKey: 'widgets.led.name',
+    descKey: 'widgets.led.desc',
     name: 'LED指示灯', 
+    emojiName: 'lightBulb',
     icon: '💡', 
     desc: '状态指示', 
     category: '显示',
@@ -130,7 +160,10 @@ export const widgetTypes = [
   },
   { 
     type: 'terminal', 
+    nameKey: 'widgets.terminal.name',
+    descKey: 'widgets.terminal.desc',
     name: '迷你终端', 
+    emojiName: 'pager',
     icon: '📟', 
     desc: '数据日志', 
     category: '工具',
@@ -141,7 +174,10 @@ export const widgetTypes = [
   },
   { 
     type: 'trigger', 
+    nameKey: 'widgets.trigger.name',
+    descKey: 'widgets.trigger.desc',
     name: '触发器', 
+    emojiName: 'highVoltage',
     icon: '⚡', 
     desc: '条件触发执行', 
     category: '高级',
@@ -152,7 +188,10 @@ export const widgetTypes = [
   },
   { 
     type: 'calculator', 
+    nameKey: 'widgets.calculator.name',
+    descKey: 'widgets.calculator.desc',
     name: '计算器', 
+    emojiName: 'abacus',
     icon: '🧮', 
     desc: '数据运算', 
     category: '高级',
@@ -178,7 +217,7 @@ export const getWidgetDefaults = (type) => {
   
   const defaults = {
     type: widgetType.type,
-    title: widgetType.name,
+    title: tStatic(widgetType.nameKey || widgetType.name, {}, undefined),
     w: widgetType.defaultW,
     h: widgetType.defaultH,
     minW: widgetType.minW || 100,
@@ -199,8 +238,12 @@ export const getWidgetDefaults = (type) => {
   // 特定类型的默认值
   switch (type) {
     case 'button':
-      defaults.label = '发送喵'
+      defaults.label = tStatic('widgets.button.defaultLabel')
       defaults.command = ''
+      defaults.style = 'primary'
+      defaults.isHex = false
+      defaults.appendCR = false
+      defaults.appendLF = true
       break
     case 'slider':
       defaults.label = '参数'

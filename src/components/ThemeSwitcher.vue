@@ -1,8 +1,10 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
 import { useRenderingStore } from '../stores/rendering'
 
+const i18n = useI18nStore()
 const themeStore = useThemeStore()
 const renderingStore = useRenderingStore()
 
@@ -18,23 +20,31 @@ const modeIcon = computed(() => {
 
 // 主题名称
 const modeName = computed(() => {
-  return themeStore.isDark ? '深色' : '浅色'
+  return themeStore.isDark ? i18n.t('theme.dark') : i18n.t('theme.light')
 })
 
-const renderingModes = [
-  { key: 'auto', label: '自动' },
-  { key: 'on', label: '增强' },
-  { key: 'off', label: '省电' }
-]
+const renderingModes = computed(() => [
+  { key: 'auto', label: i18n.t('theme.renderingModes.auto') },
+  { key: 'on', label: i18n.t('theme.renderingModes.on') },
+  { key: 'off', label: i18n.t('theme.renderingModes.off') }
+])
 </script>
 
 <template>
   <div class="flex items-center gap-2">
+    <button
+      @click="i18n.toggleLocale()"
+      class="min-w-[2.5rem] h-8 rounded-lg bg-cat-surface hover:bg-cat-border border border-cat-border flex items-center justify-center text-xs font-semibold transition-colors"
+      :title="`${i18n.t('theme.locale')}: ${i18n.localeOptions.find(item => item.value === i18n.locale)?.label || i18n.locale}`"
+    >
+      {{ i18n.localeOptions.find(item => item.value === i18n.locale)?.shortLabel || '中' }}
+    </button>
+
     <!-- 主题选择 -->
     <div class="relative group">
       <button
         class="w-8 h-8 rounded-lg bg-cat-surface hover:bg-cat-border border border-cat-border flex items-center justify-center text-lg transition-colors"
-        :title="`当前主题: ${themeStore.themeName}`">
+        :title="`Theme: ${themeStore.themeName}`">
         {{ themeStore.themeIcon }}
       </button>
 
@@ -57,7 +67,7 @@ const renderingModes = [
 
         <div class="border-t border-cat-border/70 px-3 py-2">
           <div class="mb-2 flex items-center justify-between text-[11px] text-cat-muted">
-            <span>渲染加速</span>
+            <span>{{ i18n.t('theme.rendering') }}</span>
             <span>{{ renderingStore.statusText }}</span>
           </div>
           <div class="grid grid-cols-3 gap-1">
@@ -81,7 +91,7 @@ const renderingModes = [
     <!-- 深色/浅色模式切换 -->
     <button @click="toggleDarkMode"
       class="w-8 h-8 rounded-lg bg-cat-surface hover:bg-cat-border border border-cat-border flex items-center justify-center text-lg transition-colors"
-      :title="`切换到${themeStore.isDark ? '浅色' : '深色'}模式`">
+      :title="i18n.t('theme.switchToMode', { mode: themeStore.isDark ? i18n.t('theme.light') : i18n.t('theme.dark') })">
       {{ modeIcon }}
     </button>
   </div>

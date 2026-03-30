@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useSerialStore } from './stores/serial'
 import { usePortsStore } from './stores/ports'
+import { useI18nStore } from './stores/i18n'
 
 // Components
 import HeaderBar from './components/HeaderBar.vue'
@@ -16,14 +17,15 @@ import ContextMenu from './components/ContextMenu.vue'
 
 const store = useSerialStore()
 const portsStore = usePortsStore()
+const i18n = useI18nStore()
 
 // 界面状态
 const activeTab = ref('canvas')
-const tabs = [
-  { id: 'canvas', name: '画布喵', icon: '🎨' },
-  { id: 'terminal', name: '终端喵', icon: '🖥️' },
-  { id: 'protocol', name: '协议喵', icon: '📋' }
-]
+const tabs = computed(() => [
+  { id: 'canvas', name: i18n.t('app.tabs.canvas'), icon: '🎨', emojiName: 'artistPalette' },
+  { id: 'terminal', name: i18n.t('app.tabs.terminal'), icon: '🖥️', emojiName: 'desktopComputer' },
+  { id: 'protocol', name: i18n.t('app.tabs.protocol'), icon: '📋', emojiName: 'clipboard' }
+])
 
 const isPaused = ref(false)
 const isRecording = ref(false)
@@ -75,7 +77,7 @@ const openWidgetContextMenu = ({ widgetId, x, y }) => {
   const items = [
     {
       icon: '⚙️',
-      label: '编辑控件',
+      label: i18n.t('app.contextMenu.editWidget'),
       action: () => {
         activeTab.value = 'canvas'
         showSettingsPanel.value = true
@@ -83,7 +85,7 @@ const openWidgetContextMenu = ({ widgetId, x, y }) => {
     },
     {
       icon: '📄',
-      label: '复制控件',
+      label: i18n.t('app.contextMenu.duplicateWidget'),
       action: () => {
         const duplicated = store.duplicateWidget(widgetId)
         if (duplicated) {
@@ -99,7 +101,7 @@ const openWidgetContextMenu = ({ widgetId, x, y }) => {
       { divider: true },
       {
         icon: '🧹',
-        label: '清空趋势数据',
+        label: i18n.t('app.contextMenu.clearTrend'),
         action: () => {
           store.clearChannelHistory(widget.channel)
         }
@@ -111,18 +113,18 @@ const openWidgetContextMenu = ({ widgetId, x, y }) => {
     { divider: true },
     {
       icon: '⬆️',
-      label: '置于顶层',
+      label: i18n.t('app.contextMenu.bringToFront'),
       action: () => store.bringWidgetToFront(widgetId)
     },
     {
       icon: '⬇️',
-      label: '置于底层',
+      label: i18n.t('app.contextMenu.sendToBack'),
       action: () => store.sendWidgetToBack(widgetId)
     },
     { divider: true },
     {
       icon: '🗑️',
-      label: '删除控件',
+      label: i18n.t('app.contextMenu.deleteWidget'),
       danger: true,
       action: () => {
         store.removeWidget(widgetId)
@@ -152,13 +154,22 @@ const openCanvasContextMenu = ({ x, y }) => {
     items: [
       {
         icon: '🧩',
-        label: '添加控件',
+        label: i18n.t('app.contextMenu.addWidget'),
         action: () => {
           activeTab.value = 'canvas'
           showWidgetPanel.value = true
         }
       }
     ]
+  }
+}
+
+const handleWidgetAdded = (widget) => {
+  if (!widget) return
+  selectedWidgetId.value = widget.id
+  if (widget.type === 'button') {
+    activeTab.value = 'canvas'
+    showSettingsPanel.value = true
   }
 }
 
@@ -268,6 +279,7 @@ onMounted(() => {
     <!-- 控件面板弹窗 -->
     <WidgetPanel 
       v-if="showWidgetPanel" 
+      @widget-added="handleWidgetAdded"
       @close="showWidgetPanel = false"
     />
 

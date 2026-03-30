@@ -1,195 +1,190 @@
-# 🐱 喵喵的串口工具 v2.0
+# Meow Serial Tool
 
-> 一款清晰、实用、高性能的现代串口调试助手
+[English](README.md) | [简体中文](readme_zh.md)
 
-![Version](https://img.shields.io/badge/version-2.0.0-E8A0BF)
+> A cute serial debugging workspace for people who want to connect fast, inspect data, and build small live dashboards without wrestling with a giant toolchain.
+
+![Version](https://img.shields.io/badge/version-2.0.0-ffb3c7)
 ![Vue](https://img.shields.io/badge/Vue-3.4-42b883)
-![License](https://img.shields.io/badge/license-MIT-BA90C6)
+![Vite](https://img.shields.io/badge/Vite-5.x-646cff)
+![License](https://img.shields.io/badge/license-MIT-8bd3dd)
 
-## ✨ 特点
+## What It Does
 
-- 🎨 **清晰大气的界面** - 简洁实用，无花哨霓虹效果
-- 🚀 **高刷新率** - 60FPS流畅渲染，高性能Canvas绑定
-- 🧩 **模块化控件系统** - 12种控件，自由拖拽、缩放、配置
-- 📋 **多协议支持** - Raw/FireWater/JustFloat/JSON/自定义
-- 🐱 **三套猫咪主题** - 布偶猫/暹罗猫/三花猫，支持深色/浅色模式
-- 🔤 **智能HEX翻译** - 悬停HEX字节实时显示UTF-8字符
-- 🔄 **进制转换工具** - 二进制/八进制/十进制/十六进制实时转换
+Meow Serial Tool is a browser-based serial / WebSocket debugging app with three main work areas:
 
-## 📁 项目结构
+- `Canvas`: build a live dashboard with draggable widgets
+- `Terminal`: inspect raw traffic and send commands
+- `Protocols`: configure parsers so incoming data becomes named channels
 
-```
-meow-serial-v2/
-├── src/
-│   ├── components/          # 页面组件
-│   │   ├── HeaderBar.vue    # 顶部工具栏
-│   │   ├── Sidebar.vue      # 左侧配置面板
-│   │   ├── CanvasView.vue   # 画布视图
-│   │   ├── TerminalView.vue # 终端视图
-│   │   ├── ProtocolView.vue # 协议配置
-│   │   ├── ReplayView.vue   # 数据回放
-│   │   ├── WidgetPanel.vue  # 控件选择面板
-│   │   ├── SettingsPanel.vue# 控件设置面板
-│   │   ├── ContextMenu.vue  # 右键菜单
-│   │   ├── CatMascot.vue    # 猫咪助手
-│   │   └── terminal/        # 终端子组件
-│   │       └── BaseConverter.vue  # 进制转换器
-│   │
-│   ├── widgets/             # 控件组件
-│   │   ├── WaveformWidget.vue   # 📈 波形图
-│   │   ├── FFTWidget.vue        # 📊 FFT频谱
-│   │   ├── HistogramWidget.vue  # 📶 直方图
-│   │   ├── XYPlotWidget.vue     # ⚬ XY散点图
-│   │   ├── ValueWidget.vue      # 🔢 数值显示
-│   │   ├── GaugeWidget.vue      # ⏱️ 仪表盘
-│   │   ├── ButtonWidget.vue     # 🔘 按钮
-│   │   ├── SliderWidget.vue     # 🎚️ 滑块
-│   │   ├── LedWidget.vue        # 💡 LED指示灯
-│   │   ├── TerminalWidget.vue   # 📟 迷你终端
-│   │   ├── TriggerWidget.vue    # ⚡ 触发器
-│   │   ├── CalculatorWidget.vue # 🧮 计算器
-│   │   └── index.js             # 控件索引
-│   │
-│   ├── stores/              # 状态管理
-│   │   ├── serial.js        # 串口Store
-│   │   └── theme.js         # 主题Store
-│   │
-│   ├── utils/               # 工具函数
-│   │   ├── dataParser.js    # 数据解析
-│   │   ├── storage.js       # 本地存储
-│   │   ├── dataExport.js    # 数据导出
-│   │   └── index.js
-│   │
-│   ├── styles/
-│   │   └── main.css         # 全局样式
-│   │
-│   ├── App.vue              # 根组件
-│   └── main.js              # 入口文件
-│
-├── public/
-│   └── favicon.svg          # 猫咪图标
-│
-├── index.html
-├── package.json
-├── vite.config.js
-├── tailwind.config.js
-└── postcss.config.js
-```
+It is aimed at actual usage first: connect hardware, watch data, tweak settings, save the workspace, and come back later.
 
-## 🧩 控件列表
+## Before You Start
 
-### 显示类
-| 控件 | 图标 | 说明 |
-|------|------|------|
-| 波形图 | 📈 | 多通道实时波形显示 |
-| FFT频谱 | 📊 | 频谱分析可视化 |
-| 直方图 | 📶 | 数据分布统计 |
-| XY散点图 | ⚬ | 双通道相关性分析 |
-| 数值显示 | 🔢 | 大字体实时数值 |
-| 仪表盘 | ⏱️ | 圆弧仪表显示 |
-| LED指示灯 | 💡 | 状态指示灯组 |
+- Node.js 18+
+- A Chromium-based browser if you want to use Web Serial
+- Or a WebSocket endpoint if your device is exposed over the network
 
-### 控制类
-| 控件 | 图标 | 说明 |
-|------|------|------|
-| 按钮 | 🔘 | 发送自定义命令 |
-| 滑块 | 🎚️ | 参数调节控制 |
+## Install and Run
 
-### 高级功能
-| 控件 | 图标 | 说明 |
-|------|------|------|
-| 触发器 | ⚡ | 条件触发自动执行 |
-| 计算器 | 🧮 | 多通道数据运算 |
-| 迷你终端 | 📟 | 内嵌数据日志 |
-
-## 📟 终端功能
-
-### 显示模式
-- **UTF-8模式** - 标准文本显示，支持中文等多字节字符
-- **HEX模式** - 十六进制显示，悬停可查看UTF-8翻译
-- **混合模式** - HEX + UTF-8 双行显示，同步高亮
-
-### HEX翻译功能
-悬停在HEX字节上，自动显示：
-- 对应的UTF-8字符
-- Unicode码点
-- 字节数（多字节字符）
-- 特殊字符名称（如 `\r` `\n` `\t`）
-
-### 消息地图
-- 可视化显示TX/RX消息分布
-- 拖拽视窗快速定位
-- 点击消息类型筛选
-
-### 工具面板
-- **进制转换器** - 支持二/八/十/十六进制实时转换
-- 智能输入验证（如二进制只允许0和1）
-- 一键复制转换结果
-
-## 🎨 主题系统
-
-| 主题 | 浅色模式 | 深色模式 | 风格 |
-|------|----------|----------|------|
-| 🐱 布偶猫 | 天蓝色系 | 🐈‍⬛ 黑猫（琥珀强调色） | 清新可爱 |
-| 🐈 暹罗猫 | 黑白灰 | VSCode风格 | 简约大气 |
-| 🐾 三花猫 | 粉橙黄 | 深棕暖色 | 活泼多彩 |
-
-## 🚀 快速开始
+### Install dependencies
 
 ```bash
-# 安装依赖
+pnpm install
+```
+
+Or:
+
+```bash
 npm install
-
-# 开发模式
-npm run dev
-
-# 构建生产版本
-npm run build
 ```
 
-## 📋 协议支持
+### Start the app
 
-### FireWater (默认)
-```
-25.5,60.2,101.3\n
-```
-
-### JustFloat
-```
-[float32][float32]...[0x00 0x00 0x80 0x7F]
+```bash
+pnpm dev
 ```
 
-### JSON
-```json
-{"temp":25.5,"humi":60.2,"pressure":101.3}
+Then open the local Vite URL shown in the terminal.
+
+## How to Use
+
+### 1. Add or configure a port
+
+Use the left sidebar to:
+
+- add a serial port or WebSocket port
+- set baud rate and transport settings
+- choose the target device
+- connect or disconnect
+
+### 2. Choose a parser
+
+Open the `Protocols` tab when your incoming data is not just plain text.
+
+You can:
+
+- keep `raw` for plain terminal-style debugging
+- choose a built-in parser
+- create or edit protocol profiles
+- map parsed fields into named channels
+
+Once a parser is active, parsed values show up as channels and can be used by widgets.
+
+### 3. Inspect traffic in Terminal
+
+Use the `Terminal` tab to:
+
+- inspect RX / TX logs
+- switch display formats
+- send text or HEX commands
+- use append `CR` / `LF`
+- export logs when needed
+
+This is the best place to verify that the device is talking before you spend time building a dashboard.
+
+### 4. Build a dashboard in Canvas
+
+Use the `Widgets` button in the top bar to add widgets such as:
+
+- waveform
+- sparkline
+- value card
+- gauge
+- FFT
+- histogram
+- XY plot
+- button
+- slider
+- trigger
+- mini terminal
+
+Widgets can be dragged, resized, duplicated, layered, and configured from the right-side settings panel.
+
+### 5. Configure control widgets
+
+Control widgets are meant to be useful immediately, not just decorative.
+
+For example, the button widget now supports:
+
+- better default size for direct clicking
+- label and command editing
+- style presets
+- UTF-8 text or HEX send mode
+- `CR` / `LF` options
+
+When you add a button widget, its settings panel opens automatically so you can configure it right away.
+
+### 6. Save your workspace
+
+Workspace JSON can preserve:
+
+- widgets and layout
+- ports and parser choices
+- theme settings
+- canvas background mode
+- UI locale
+
+Use export / import from the top bar when you want to move setups between machines or keep named snapshots.
+
+## Useful Workflow
+
+For most devices, the smoothest flow is:
+
+1. Connect the port
+2. Confirm traffic in `Terminal`
+3. Pick or build a parser in `Protocols`
+4. Verify channels are updating
+5. Add widgets in `Canvas`
+6. Export the workspace once it looks good
+
+## i18n
+
+The app includes lightweight built-in i18n support.
+
+- Supported locales: `zh-CN`, `en`
+- Switch language from the top-right language toggle
+- Locale is saved locally
+- Locale is also stored in workspace JSON
+
+Current coverage focuses on the app shell, widget catalog, and key setup flows.
+
+## Development
+
+Development is intentionally simple.
+
+### Common commands
+
+```bash
+pnpm dev
+pnpm build
+pnpm preview
 ```
 
-### 自定义
-支持自定义分隔符、结束符、解析函数
+### Main folders
 
-## 🐱 猫咪元素
+```text
+src/
+├── components/   # App shell and views
+├── widgets/      # Dashboard widgets
+├── stores/       # Pinia state
+├── parsers/      # Parser registry and built-ins
+├── utils/        # Serial, storage, export helpers
+├── i18n/         # Translation messages and helpers
+└── styles/       # Global styles
+```
 
-- 😺 连接按钮: "连接喵!"
-- 😿 断开按钮: "断开连接喵"
-- 🐾 发送按钮: "发送喵 🐾"
-- 🧩 控件面板: "控件喵盒"
-- 📋 协议页面: "协议喵"
-- 🎬 回放页面: "回放喵"
-- 右下角猫咪助手陪伴~
+If you are extending the project, the usual entry points are:
 
-## 🎯 后续计划
+- `src/components/` for app-level UI
+- `src/widgets/` for new dashboard controls
+- `src/parsers/` for protocol support
+- `src/i18n/` for translation coverage
 
-- [ ] Electron集成真实串口
-- [ ] 数据录制与回放
-- [ ] Python脚本扩展
-- [ ] 更多控件类型
-- [x] 主题自定义（已完成：三套主题 + 深色/浅色模式）
-- [ ] 多语言支持
+## License
 
-## 📄 许可证
-
-MIT License
+MIT
 
 ---
 
-Made with 💕 by 喵喵工作室 🐱
+Made with paws, packets, and a healthy respect for debugging sessions.

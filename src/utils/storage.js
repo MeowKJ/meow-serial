@@ -5,6 +5,8 @@
 
 const STORAGE_PREFIX = 'meow_serial_'
 const WORKSPACE_KEY = 'workspace'
+const WORKSPACE_EXPORT_KIND = 'meow-serial-workspace'
+const WORKSPACE_EXPORT_VERSION = 1
 
 const cloneJsonSafe = (value) => JSON.parse(JSON.stringify(value))
 
@@ -58,6 +60,7 @@ const serializeWorkspace = ({
   protocol = {},
   protocolProfiles = [],
   theme = {},
+  ui = {},
   canvas = {},
   ports = []
 }) => ({
@@ -66,10 +69,44 @@ const serializeWorkspace = ({
   protocol: cloneJsonSafe(protocol),
   protocolProfiles: Array.isArray(protocolProfiles) ? cloneJsonSafe(protocolProfiles) : [],
   theme: cloneJsonSafe(theme),
+  ui: cloneJsonSafe(ui),
   canvas: cloneJsonSafe(canvas),
   ports: Array.isArray(ports) ? cloneJsonSafe(ports) : [],
   savedAt: Date.now()
 })
+
+const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+
+const looksLikeWorkspaceSnapshot = (value) => {
+  if (!isPlainObject(value)) return false
+
+  return [
+    Array.isArray(value.widgets),
+    Array.isArray(value.channels),
+    Array.isArray(value.ports),
+    Array.isArray(value.protocolProfiles)
+  ].some(Boolean)
+}
+
+const createWorkspaceExportPayload = (workspace) => ({
+  kind: WORKSPACE_EXPORT_KIND,
+  version: WORKSPACE_EXPORT_VERSION,
+  exportedAt: Date.now(),
+  workspace: serializeWorkspace(workspace)
+})
+
+const formatTimestampForFilename = (date = new Date()) => {
+  const pad = (value) => String(value).padStart(2, '0')
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate())
+  ].join('') + '_' + [
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds())
+  ].join('')
+}
 
 // 保存命名布局
 export const saveLayout = (name, workspace) => {
@@ -111,6 +148,54 @@ export const saveWorkspace = (workspace) => {
 // 加载当前工作区
 export const loadWorkspace = () => {
   return loadFromStorage(WORKSPACE_KEY, null)
+}
+
+export const exportWorkspaceToFile = (workspace, filename = `meow_workspace_${formatTimestampForFilename()}.json`) => {
+  try {
+    const payload = createWorkspaceExportPayload(workspace)
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+    return filename
+  } catch (e) {
+    console.error('导出失败:', e)
+    return null
+  }
+}
+
+export const readJsonFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        resolve(JSON.parse(e.target?.result || 'null'))
+      } catch (err) {
+        reject(err)
+      }
+    }
+    reader.onerror = reject
+    reader.readAsText(file)
+  })
+}
+
+export const extractWorkspaceSnapshot = (config) => {
+  if (config?.kind === WORKSPACE_EXPORT_KIND && looksLikeWorkspaceSnapshot(config.workspace)) {
+    return config.workspace
+  }
+
+  if (looksLikeWorkspaceSnapshot(config?.workspace)) {
+    return config.workspace
+  }
+
+  if (looksLikeWorkspaceSnapshot(config)) {
+    return config
+  }
+
+  return null
 }
 
 // 保存连接配置

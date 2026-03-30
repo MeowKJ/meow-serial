@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { usePortsStore } from '../stores/ports'
 
 const props = defineProps({
@@ -17,8 +17,8 @@ const handleClick = async () => {
     const target = portsStore.ports.find(p => p.connected)
     if (target) {
       await portsStore.sendToPort(target.id, props.widget.command, {
-        appendCR: false,
-        appendLF: true,
+        appendCR: props.widget.appendCR === true,
+        appendLF: props.widget.appendLF !== false,
         isHex: props.widget.isHex || false
       })
     }
@@ -30,7 +30,7 @@ const handleClick = async () => {
 }
 
 // 按钮样式
-const buttonStyle = props.widget.style || 'primary'
+const buttonStyle = computed(() => props.widget.style || 'primary')
 const styles = {
   primary: 'from-cat-primary to-cat-secondary',
   success: 'from-green-500 to-emerald-500',

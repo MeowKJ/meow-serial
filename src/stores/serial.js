@@ -1,9 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import {
+  exportWorkspaceToFile,
+  extractWorkspaceSnapshot,
   getLayoutList,
   loadLayout,
   loadWorkspace,
+  readJsonFile,
   saveLayout,
   saveWorkspace
 } from '../utils/storage'
@@ -11,6 +14,7 @@ import { getParser } from '../utils/parserRegistry'
 import { syncRegisteredParsers } from '../parsers'
 import { loadUserProtocolProfiles, saveUserProtocolProfiles } from '../utils/protocolProfiles'
 import { useThemeStore } from './theme'
+import { useI18nStore } from './i18n'
 import { usePortsStore } from './ports'
 
 export const useSerialStore = defineStore('serial', () => {
@@ -18,6 +22,7 @@ export const useSerialStore = defineStore('serial', () => {
 
   // ===== 数据通道（全局通道池）=====
   const themeStore = useThemeStore()
+  const i18nStore = useI18nStore()
   const portsStore = usePortsStore()
 
   const channels = ref([])
@@ -61,6 +66,9 @@ export const useSerialStore = defineStore('serial', () => {
   // ===== 控件 =====
   const widgets = ref([])
   let widgetIdCounter = 1
+  const canvas = ref({
+    backdropMode: 'grid'
+  })
 
   const getNextWidgetZIndex = () => {
     return widgets.value.reduce((max, widget) => Math.max(max, Number(widget.zIndex) || 0), 0) + 1
@@ -218,11 +226,13 @@ export const useSerialStore = defineStore('serial', () => {
   // ===== 控件管理 =====
 
   const addWidget = (widget) => {
-    widgets.value.push({
+    const createdWidget = {
       ...widget,
       id: widgetIdCounter++,
       zIndex: Number.isFinite(widget?.zIndex) ? widget.zIndex : getNextWidgetZIndex()
-    })
+    }
+    widgets.value.push(createdWidget)
+    return createdWidget
   }
 
   const removeWidget = (id) => {
@@ -293,11 +303,33 @@ export const useSerialStore = defineStore('serial', () => {
       }))
   }
 
+  const normalizeCanvas = (value = {}) => {
+    if (value?.backdropMode === 'grid' || value?.backdropMode === 'dots' || value?.backdropMode === 'blank') {
+      return {
+        backdropMode: value.backdropMode
+      }
+    }
+
+    if (typeof value?.showBackdropPattern === 'boolean') {
+      return {
+        backdropMode: value.showBackdropPattern ? 'grid' : 'blank'
+      }
+    }
+
+    return {
+      backdropMode: 'grid'
+    }
+  }
+
   const getWorkspaceSnapshot = () => {
     const portsStore = usePortsStore()
     return {
       widgets: widgets.value,
       channels: channels.value,
+      ui: {
+        locale: i18nStore.locale
+      },
+      canvas: canvas.value,
       ports: portsStore.serializePorts(),
       protocolProfiles: loadUserProtocolProfiles(),
       theme: {
@@ -321,10 +353,15 @@ export const useSerialStore = defineStore('serial', () => {
     if (typeof snapshot.theme?.isDark === 'boolean') {
       themeStore.setDarkMode(snapshot.theme.isDark)
     }
+    if (snapshot.ui?.locale) {
+      i18nStore.setLocale(snapshot.ui.locale)
+    }
 
     if (Array.isArray(snapshot.channels)) {
       channels.value = normalizeChannels(snapshot.channels)
     }
+
+    canvas.value = normalizeCanvas(snapshot.canvas)
 
     if (Array.isArray(snapshot.widgets)) {
       widgets.value = normalizeWidgets(snapshot.widgets)
@@ -366,6 +403,27 @@ export const useSerialStore = defineStore('serial', () => {
   const saveNamedLayout = (name) => {
     if (!name) return false
     return saveLayout(name, getWorkspaceSnapshot())
+  }
+
+  const exportWorkspaceConfig = (filename) => {
+    return exportWorkspaceToFile(getWorkspaceSnapshot(), filename)
+  }
+
+  const importWorkspaceConfig = async (file) => {
+    const config = await readJsonFile(file)
+    const snapshot = extractWorkspaceSnapshot(config)
+
+    if (!snapshot) {
+      throw new Error('不是可识别的全局配置 JSON')
+    }
+
+    const applied = applyWorkspaceSnapshot(snapshot)
+    if (!applied) {
+      throw new Error('全局配置导入失败')
+    }
+
+    saveWorkspaceState()
+    return snapshot
   }
 
   const loadNamedLayout = (name) => {
@@ -413,6 +471,19 @@ export const useSerialStore = defineStore('serial', () => {
     return true
   }
 
+  const setCanvasBackdropMode = (mode) => {
+    if (!['grid', 'dots', 'blank'].includes(mode)) return false
+    canvas.value.backdropMode = mode
+    return true
+  }
+
+  const toggleCanvasBackdropPattern = () => {
+    const modeOrder = ['grid', 'dots', 'blank']
+    const currentIndex = modeOrder.indexOf(canvas.value.backdropMode)
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % modeOrder.length
+    canvas.value.backdropMode = modeOrder[nextIndex]
+  }
+
   // ===== 格式化 =====
 
   const formatBytes = (bytes) => {
@@ -447,6 +518,14 @@ export const useSerialStore = defineStore('serial', () => {
     saveWorkspaceState()
   }, { deep: true })
 
+  watch(canvas, () => {
+    saveWorkspaceState()
+  }, { deep: true })
+
+  watch(() => i18nStore.locale, () => {
+    saveWorkspaceState()
+  })
+
   watch(() => portsStore.serializePorts(), () => {
     saveWorkspaceState()
   }, { deep: true })
@@ -474,6 +553,7 @@ export const useSerialStore = defineStore('serial', () => {
     dataHistory,
     fullDataHistory,
     widgets,
+    canvas,
 
     // 通道方法
     applyParsedValues,
@@ -488,9 +568,13 @@ export const useSerialStore = defineStore('serial', () => {
     duplicateWidget,
     bringWidgetToFront,
     sendWidgetToBack,
+    setCanvasBackdropMode,
+    toggleCanvasBackdropPattern,
 
     // Workspace
     applyWorkspaceSnapshot,
+    exportWorkspaceConfig,
+    importWorkspaceConfig,
     saveWorkspaceState,
     loadWorkspaceState,
     saveNamedLayout,

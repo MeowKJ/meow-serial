@@ -1,9 +1,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useSerialStore } from '../stores/serial'
+import { useI18nStore } from '../stores/i18n'
 import { usePortsStore } from '../stores/ports'
 
 const store = useSerialStore()
+const i18n = useI18nStore()
 const portsStore = usePortsStore()
 const props = defineProps({
   widget: Object
@@ -116,23 +118,30 @@ const deleteWidget = () => {
     emit('delete')
   }
 }
+
+const buttonStyleOptions = computed(() => ([
+  { value: 'primary', label: i18n.t('settings.buttonStyles.primary') },
+  { value: 'success', label: i18n.t('settings.buttonStyles.success') },
+  { value: 'warning', label: i18n.t('settings.buttonStyles.warning') },
+  { value: 'danger', label: i18n.t('settings.buttonStyles.danger') }
+]))
 </script>
 
 <template>
   <aside class="w-[17rem] bg-cat-card border-l border-cat-border flex flex-col shrink-0">
     <div class="px-3 py-3 border-b border-cat-border flex items-center justify-between">
-      <span class="font-medium">🔧 控件设置</span>
+      <span class="font-medium">🔧 {{ i18n.t('settings.title') }}</span>
       <button @click="emit('close')" class="text-cat-muted hover:text-cat-text">✕</button>
     </div>
     
     <div v-if="widget" class="p-3 space-y-3 overflow-auto">
       <div v-if="widget.type !== 'sparkline'">
-        <label class="text-xs text-cat-muted block mb-1">标题</label>
+        <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.titleLabel') }}</label>
         <input v-model="widget.title" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
       </div>
       
       <div v-if="['value', 'gauge'].includes(widget.type)">
-        <label class="text-xs text-cat-muted block mb-1">绑定通道</label>
+        <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.channelLabel') }}</label>
         <select v-model="widget.channel" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
           <option v-for="ch in store.channels" :key="ch.id" :value="ch.id">{{ ch.name }}</option>
         </select>
@@ -327,11 +336,60 @@ const deleteWidget = () => {
         </div>
       </div>
 
-      <div v-if="widget.type === 'button'">
-        <label class="text-xs text-cat-muted block mb-1">按钮文字</label>
-        <input v-model="widget.label" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
-        <label class="text-xs text-cat-muted block mb-1 mt-3">发送命令</label>
-        <input v-model="widget.command" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm font-mono">
+      <div v-if="widget.type === 'button'" class="space-y-3">
+        <div class="text-[11px] text-cat-muted bg-cat-surface/70 rounded-lg px-3 py-2">
+          {{ i18n.t('settings.buttonHelp') }}
+        </div>
+
+        <div>
+          <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.buttonLabel') }}</label>
+          <input
+            v-model="widget.label"
+            :placeholder="i18n.t('settings.buttonLabelPlaceholder')"
+            class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm"
+          >
+        </div>
+
+        <div>
+          <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.buttonCommand') }}</label>
+          <input
+            v-model="widget.command"
+            :placeholder="i18n.t('settings.buttonCommandPlaceholder')"
+            class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm font-mono"
+          >
+        </div>
+
+        <div>
+          <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.buttonStyle') }}</label>
+          <select v-model="widget.style" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+            <option v-for="option in buttonStyleOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.buttonSendFormat') }}</label>
+          <select v-model="widget.isHex" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+            <option :value="false">{{ i18n.t('settings.utf8') }}</option>
+            <option :value="true">{{ i18n.t('settings.hex') }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.lineEnding') }}</label>
+          <div class="rounded-lg border border-cat-border bg-cat-surface/40 px-3 py-2 space-y-2">
+            <label class="flex items-center gap-2 text-sm text-cat-text">
+              <input type="checkbox" v-model="widget.appendCR" class="accent-cat-primary">
+              {{ i18n.t('settings.appendCR') }}
+            </label>
+            <label class="flex items-center gap-2 text-sm text-cat-text">
+              <input type="checkbox" v-model="widget.appendLF" class="accent-cat-primary">
+              {{ i18n.t('settings.appendLF') }}
+            </label>
+          </div>
+          <div class="text-[10px] text-cat-muted mt-1">{{ i18n.t('settings.lineEndingHint') }}</div>
+        </div>
       </div>
 
       <div v-if="['value', 'gauge'].includes(widget.type)">
@@ -341,22 +399,22 @@ const deleteWidget = () => {
       
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-cat-muted block mb-1">宽度</label>
+          <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.width') }}</label>
           <input v-model.number="widget.w" type="number" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
         </div>
         <div>
-          <label class="text-xs text-cat-muted block mb-1">高度</label>
+          <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.height') }}</label>
           <input v-model.number="widget.h" type="number" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
         </div>
       </div>
       
       <button @click="deleteWidget" class="w-full py-2 rounded-lg bg-red-500/20 text-red-400 text-sm">
-        🗑️ 删除控件
+        🗑️ {{ i18n.t('settings.deleteWidget') }}
       </button>
     </div>
     
     <div v-else class="flex-1 flex items-center justify-center text-cat-muted text-sm">
-      选择一个控件进行设置
+      {{ i18n.t('settings.selectWidget') }}
     </div>
   </aside>
 </template>

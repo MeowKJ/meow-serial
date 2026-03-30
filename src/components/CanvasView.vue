@@ -24,6 +24,19 @@ const canvasRoot = ref(null)
 
 const SNAP_THRESHOLD = 10
 const SNAP_GRID = 12
+const INTERACTIVE_DRAG_EXCLUDE_SELECTOR = [
+  'input',
+  'textarea',
+  'select',
+  'button',
+  'option',
+  'a',
+  'label',
+  '[contenteditable=""]',
+  '[contenteditable="true"]',
+  '[data-widget-drag-ignore]'
+].join(', ')
+
 // 控件组件映射
 const widgetComponents = {
   waveform: WaveformWidget,
@@ -205,6 +218,16 @@ const startDrag = (widget, e) => {
   document.addEventListener('mouseup', stopDrag)
 }
 
+const shouldSkipContentDrag = (target) => {
+  if (!(target instanceof HTMLElement)) return false
+  return Boolean(target.closest(INTERACTIVE_DRAG_EXCLUDE_SELECTOR))
+}
+
+const startContentDrag = (widget, e) => {
+  if (shouldSkipContentDrag(e.target)) return
+  startDrag(widget, e)
+}
+
 const onDrag = (e) => {
   if (!dragWidget) return
   const snapped = snapDragPosition(
@@ -305,7 +328,11 @@ onUnmounted(() => {
 <template>
   <div 
     ref="canvasRoot"
-    class="h-full grid-pattern paw-pattern relative overflow-auto p-4"
+    :class="[
+      'h-full bg-cat-bg relative overflow-auto p-4',
+      store.canvas?.backdropMode === 'grid' ? 'canvas-backdrop-grid' : '',
+      store.canvas?.backdropMode === 'dots' ? 'canvas-backdrop-dots' : ''
+    ]"
     @click="deselectWidget"
     @contextmenu="showCanvasContextMenu"
   >
@@ -337,11 +364,8 @@ onUnmounted(() => {
       
       <!-- 控件内容 -->
       <div
-        :class="[
-          'h-[calc(100%-32px)] p-2',
-          widget.type === 'waveform' ? 'cursor-move' : ''
-        ]"
-        @mousedown.stop="widget.type === 'waveform' && startDrag(widget, $event)"
+        class="h-[calc(100%-32px)] p-2 cursor-move"
+        @mousedown.stop="startContentDrag(widget, $event)"
       >
         <component 
           :is="widgetComponents[widget.type]" 
