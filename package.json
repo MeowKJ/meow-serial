@@ -2,6 +2,7 @@
   "name": "meow-serial-v2",
   "version": "2.0.0",
   "description": "喵喵的串口工具 v2 - 清晰实用版",
+  "packageManager": "pnpm@10.28.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

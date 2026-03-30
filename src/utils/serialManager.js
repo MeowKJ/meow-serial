@@ -20,6 +20,7 @@ class SerialManager {
     this.buffer = new Uint8Array(0)
     
     // 回调函数
+    this.onChunk = null          // 原始字节块接收回调（实时）
     this.onData = null           // 接收数据回调
     this.onConnect = null        // 连接成功回调
     this.onDisconnect = null     // 断开连接回调
@@ -321,6 +322,14 @@ class SerialManager {
    */
   handleReceivedData(data) {
     this.stats.bytesReceived += data.length
+
+    if (this.onChunk) {
+      this.onChunk({
+        raw: data,
+        text: new TextDecoder().decode(data),
+        timestamp: Date.now()
+      })
+    }
     
     // 根据协议类型处理数据
     switch (this.protocol.type) {

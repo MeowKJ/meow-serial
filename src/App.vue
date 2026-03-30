@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useSerialStore } from './stores/serial'
-import { usePortsStore } from './stores/ports'
 import { useI18nStore } from './stores/i18n'
 
 // Components
@@ -12,11 +11,9 @@ import TerminalView from './components/TerminalView.vue'
 import ProtocolView from './components/ProtocolView.vue'
 import WidgetPanel from './components/WidgetPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
-import TerminalSettingsPanel from './components/TerminalSettingsPanel.vue'
 import ContextMenu from './components/ContextMenu.vue'
 
 const store = useSerialStore()
-const portsStore = usePortsStore()
 const i18n = useI18nStore()
 
 // 界面状态
@@ -31,7 +28,6 @@ const isPaused = ref(false)
 const isRecording = ref(false)
 const showWidgetPanel = ref(false)
 const showSettingsPanel = ref(false)
-const showTerminalSettings = ref(true)
 const selectedWidgetId = ref(null)
 
 // 右键菜单
@@ -173,50 +169,6 @@ const handleWidgetAdded = (widget) => {
   }
 }
 
-// 导出日志 — 合并所有端口日志
-const handleExportLog = ({ format }) => {
-  const allLogs = []
-  for (const p of portsStore.ports) {
-    for (const log of p.logs) {
-      allLogs.push({ ...log, _portLabel: p.label })
-    }
-  }
-  allLogs.sort((a, b) => a.id - b.id)
-  const logs = allLogs
-  let content = ''
-  let filename = `serial_log_${new Date().toISOString().slice(0,19).replace(/[:-]/g, '')}`
-
-  if (format === 'json') {
-    content = JSON.stringify(logs.map(l => ({
-      time: l.time,
-      dir: l.dir,
-      data: l.data,
-      type: l.type
-    })), null, 2)
-    filename += '.json'
-  } else if (format === 'csv') {
-    content = 'Time,Direction,Data\n' + logs.map(l => {
-      const dir = l.dir === 'rx' ? 'RX' : (l.dir === 'tx' ? 'TX' : 'SYS')
-      return `"${l.time}","${dir}","${l.data.replace(/"/g, '""')}"`
-    }).join('\n')
-    filename += '.csv'
-  } else {
-    content = logs.map(l => {
-      const dir = l.dir === 'rx' ? 'RX' : (l.dir === 'tx' ? 'TX' : 'SYS')
-      return `[${l.time}] [${dir}] ${l.data}`
-    }).join('\n')
-    filename += '.txt'
-  }
-
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
 // 全局点击关闭菜单
 onMounted(() => {
   document.addEventListener('click', closeContextMenu)
@@ -253,11 +205,7 @@ onMounted(() => {
             @show-context-menu="openWidgetContextMenu"
             @show-canvas-context-menu="openCanvasContextMenu"
           />
-          <TerminalView
-            v-show="activeTab === 'terminal'"
-            :settings-visible="showTerminalSettings"
-            @toggle-settings="showTerminalSettings = !showTerminalSettings"
-          />
+          <TerminalView v-show="activeTab === 'terminal'" />
           <ProtocolView v-show="activeTab === 'protocol'" />
         </div>
       </main>
@@ -268,11 +216,6 @@ onMounted(() => {
         :widget="selectedWidget"
         @close="showSettingsPanel = false"
         @delete="selectedWidgetId = null"
-      />
-      <TerminalSettingsPanel
-        v-if="showTerminalSettings && activeTab === 'terminal'"
-        @close="showTerminalSettings = false"
-        @export-log="handleExportLog"
       />
     </div>
 

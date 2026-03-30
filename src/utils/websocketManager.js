@@ -6,6 +6,7 @@ class WebSocketManager {
     this.buffer = new Uint8Array(0)
 
     this.onData = null
+    this.onChunk = null
     this.onConnect = null
     this.onDisconnect = null
     this.onError = null
@@ -126,6 +127,12 @@ class WebSocketManager {
 
   handleReceivedData(data) {
     this.stats.bytesReceived += data.length
+
+    this.onChunk?.({
+      raw: data,
+      text: new TextDecoder().decode(data),
+      timestamp: Date.now()
+    })
 
     switch (this.protocol.type) {
       case 'raw':

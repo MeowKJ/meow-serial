@@ -31,7 +31,7 @@ const renderingModes = computed(() => [
 </script>
 
 <template>
-  <div class="flex items-center gap-2">
+  <div class="relative z-[80] flex items-center gap-2">
     <button
       @click="i18n.toggleLocale()"
       class="min-w-[2.5rem] h-8 rounded-lg bg-cat-surface hover:bg-cat-border border border-cat-border flex items-center justify-center text-xs font-semibold transition-colors"
@@ -50,39 +50,41 @@ const renderingModes = computed(() => [
 
       <!-- 主题下拉菜单 -->
       <div
-        class="absolute right-0 top-full mt-2 w-52 bg-cat-card border border-cat-border rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
-        <div class="p-1">
-          <button v-for="theme in themeStore.themeList" :key="theme.key" @click="themeStore.setTheme(theme.key)" :class="[
-            'w-full px-3 py-2 rounded-lg text-sm text-left flex items-center gap-2 transition-colors',
-            themeStore.currentTheme === theme.key
-              ? 'bg-cat-primary/20 text-cat-primary'
-              : 'hover:bg-cat-surface text-cat-text'
-          ]">
-            <span class="text-lg">{{ (themeStore.isDark && theme.key === 'ragdoll') ? (theme.darkIcon || '🐈‍⬛') :
-              theme.icon }}</span>
-            <span>{{ (themeStore.isDark && theme.key === 'ragdoll') ? (theme.darkName || '黑猫') : theme.name }}</span>
-            <span v-if="themeStore.currentTheme === theme.key" class="ml-auto text-xs">✓</span>
-          </button>
-        </div>
-
-        <div class="border-t border-cat-border/70 px-3 py-2">
-          <div class="mb-2 flex items-center justify-between text-[11px] text-cat-muted">
-            <span>{{ i18n.t('theme.rendering') }}</span>
-            <span>{{ renderingStore.statusText }}</span>
-          </div>
-          <div class="grid grid-cols-3 gap-1">
-            <button
-              v-for="mode in renderingModes"
-              :key="mode.key"
-              @click="renderingStore.setMode(mode.key)"
-              :class="[
-                'rounded-lg px-2 py-1.5 text-xs font-medium transition-colors',
-                renderingStore.mode === mode.key
-                  ? 'bg-cat-primary/20 text-cat-primary'
-                  : 'bg-cat-surface text-cat-muted hover:bg-cat-border hover:text-cat-text'
-              ]">
-              {{ mode.label }}
+        class="absolute right-0 top-full z-[90] pt-2 opacity-0 invisible pointer-events-none group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:visible group-focus-within:pointer-events-auto transition-all">
+        <div class="w-52 overflow-hidden rounded-xl border border-cat-border bg-cat-card shadow-2xl">
+          <div class="p-1">
+            <button v-for="theme in themeStore.themeList" :key="theme.key" @click="themeStore.setTheme(theme.key)" :class="[
+              'w-full px-3 py-2 rounded-lg text-sm text-left flex items-center gap-2 transition-colors',
+              themeStore.currentTheme === theme.key
+                ? 'bg-cat-primary/20 text-cat-primary'
+                : 'hover:bg-cat-surface text-cat-text'
+            ]">
+              <span class="text-lg">{{ (themeStore.isDark && theme.key === 'ragdoll') ? (theme.darkIcon || '🐈‍⬛') :
+                theme.icon }}</span>
+              <span>{{ (themeStore.isDark && theme.key === 'ragdoll') ? (theme.darkName || '黑猫') : theme.name }}</span>
+              <span v-if="themeStore.currentTheme === theme.key" class="ml-auto text-xs">✓</span>
             </button>
+          </div>
+
+          <div class="border-t border-cat-border/70 px-3 py-2">
+            <div class="mb-2 flex items-center justify-between text-[11px] text-cat-muted">
+              <span>{{ i18n.t('theme.rendering') }}</span>
+              <span>{{ renderingStore.statusText }}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1">
+              <button
+                v-for="mode in renderingModes"
+                :key="mode.key"
+                @click="renderingStore.setMode(mode.key)"
+                :class="[
+                  'rounded-lg px-2 py-1.5 text-xs font-medium transition-colors',
+                  renderingStore.mode === mode.key
+                    ? 'bg-cat-primary/20 text-cat-primary'
+                    : 'bg-cat-surface text-cat-muted hover:bg-cat-border hover:text-cat-text'
+                ]">
+                {{ mode.label }}
+              </button>
+            </div>
           </div>
         </div>
       </div>

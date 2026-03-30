@@ -13,7 +13,6 @@ const portsStore = usePortsStore()
 const importInput = ref(null)
 
 const connectedCount = computed(() => portsStore.ports.filter(port => port.connected).length)
-const connectedPorts = computed(() => portsStore.ports.filter(port => port.connected))
 const totalRateLabel = computed(() => {
   if (!portsStore.anyConnected) return ''
   return `↓${(portsStore.totalStats.rxRate / 1000).toFixed(1)}K/s · ↑${(portsStore.totalStats.txRate / 1000).toFixed(1)}K/s`
@@ -90,7 +89,7 @@ const toggleCanvasBackdropPattern = () => {
 </script>
 
 <template>
-  <header class="bg-cat-card/92 backdrop-blur-xl border-b border-cat-border/45 px-2 py-1 shrink-0 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+  <header class="relative z-[70] bg-cat-card/92 backdrop-blur-xl border-b border-cat-border/45 px-2 py-1 shrink-0 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
     <div class="flex items-center gap-2.5">
       <div class="flex items-center gap-2 min-w-0">
         <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-cat-primary to-cat-secondary flex items-center justify-center text-sm shadow-sm shrink-0">
@@ -166,22 +165,6 @@ const toggleCanvasBackdropPattern = () => {
           class="header-status-pill text-cat-primary"
         >
           {{ totalRateLabel }}
-        </div>
-
-        <div
-          v-if="connectedPorts.length > 0"
-          class="flex items-center gap-1 max-w-[18rem] overflow-x-auto rounded-full bg-cat-surface/42 px-1.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-        >
-          <template v-for="portState in connectedPorts" :key="portState.id">
-            <div
-              class="rounded-full bg-cat-card/92 px-2 py-0.5 text-[10px] flex items-center gap-1 shrink-0 leading-none shadow-[0_1px_3px_rgba(15,23,42,0.08)]"
-              :title="`${portState.label} · ${portState.baudRate}`"
-            >
-              <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-              <span class="text-cat-text">{{ portState.label }}</span>
-              <span class="text-cat-muted">{{ portState.baudRate }}</span>
-            </div>
-          </template>
         </div>
 
         <ThemeSwitcher />

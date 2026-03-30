@@ -33,12 +33,6 @@ It is aimed at actual usage first: connect hardware, watch data, tweak settings,
 pnpm install
 ```
 
-Or:
-
-```bash
-npm install
-```
-
 ### Start the app
 
 ```bash

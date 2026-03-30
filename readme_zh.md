@@ -33,12 +33,6 @@
 pnpm install
 ```
 
-或者：
-
-```bash
-npm install
-```
-
 ### 启动项目
 
 ```bash

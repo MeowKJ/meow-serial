@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { SerialManager } from '../utils/serialManager'
 import { WebSocketManager } from '../utils/websocketManager'
 import { getParser, getAllParsers } from '../utils/parserRegistry'
@@ -16,6 +16,22 @@ const shouldShowTerminalRxByDefault = (baudRate) => Number(baudRate || 0) < HIGH
 const formatTime = () => {
   const now = new Date()
   return now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0')
+}
+
+const concatBytes = (left, right) => {
+  if (!left?.length) return right || null
+  if (!right?.length) return left || null
+  const merged = new Uint8Array(left.length + right.length)
+  merged.set(left)
+  merged.set(right, left.length)
+  return merged
+}
+
+const splitUtf8TextChunks = (text) => {
+  if (!text) return []
+  const normalized = String(text)
+  const chunks = normalized.match(/[^\n]*\n|[^\n]+/g)
+  return chunks && chunks.length ? chunks : [normalized]
 }
 
 export const usePortsStore = defineStore('ports', () => {
@@ -49,6 +65,9 @@ export const usePortsStore = defineStore('ports', () => {
       device: null,         // Web Serial port 对象
       websocketUrl: overrides.websocketUrl || '',
       portName: '',
+      savedVendorId: overrides.savedVendorId ?? null,
+      savedProductId: overrides.savedProductId ?? null,
+      connectOnRestore: overrides.connectOnRestore === true,
       connected: false,
       connecting: false,
       baudRate,
@@ -90,7 +109,7 @@ export const usePortsStore = defineStore('ports', () => {
   }
 
   const addPort = (overrides = {}) => {
-    const portState = createPortState(overrides)
+    const portState = reactive(createPortState(overrides))
     portState._manager = createManager(portState.transportType)
     _setupManagerCallbacks(portState)
     _initParser(portState)
@@ -262,6 +281,8 @@ export const usePortsStore = defineStore('ports', () => {
       const info = device.getInfo()
       portState.device = device
       portState.portName = getPortDisplayName(info, 0)
+      portState.savedVendorId = info?.usbVendorId ?? null
+      portState.savedProductId = info?.usbProductId ?? null
       return true
     } catch (error) {
       if (error.name !== 'NotFoundError') {
@@ -296,6 +317,61 @@ export const usePortsStore = defineStore('ports', () => {
     const info = device.getInfo?.() || {}
     portState.device = device
     portState.portName = getPortDisplayName(info, 0)
+    portState.savedVendorId = info?.usbVendorId ?? null
+    portState.savedProductId = info?.usbProductId ?? null
+  }
+
+  const rebindAuthorizedDevices = async () => {
+    if (!serialSupported.value) return false
+
+    let authorizedPorts = []
+    try {
+      authorizedPorts = await navigator.serial.getPorts()
+    } catch {
+      return false
+    }
+
+    if (!authorizedPorts.length) return false
+
+    const unusedPorts = [...authorizedPorts]
+    const restoredPorts = []
+
+    const takeMatchingPort = (portState) => {
+      if (portState.transportType !== 'serial' || portState.device) return null
+
+      const matchedIndex = unusedPorts.findIndex((device) => {
+        const info = device.getInfo?.() || {}
+
+        if (portState.savedVendorId != null && portState.savedProductId != null) {
+          return info.usbVendorId === portState.savedVendorId &&
+                 info.usbProductId === portState.savedProductId
+        }
+
+        const displayName = getPortDisplayName(info, 0)
+        return Boolean(portState.portName) && displayName === portState.portName
+      })
+
+      if (matchedIndex < 0) return null
+      return unusedPorts.splice(matchedIndex, 1)[0] || null
+    }
+
+    for (const portState of ports.value) {
+      const matchedDevice = takeMatchingPort(portState)
+      if (!matchedDevice) continue
+
+      assignDevice(portState.id, matchedDevice)
+      restoredPorts.push(portState)
+      _addLog(portState, 'system', `已恢复授权设备: ${portState.portName}`)
+    }
+
+    for (const portState of restoredPorts) {
+      if (portState.connectOnRestore && !portState.connected && !portState.connecting) {
+        _addLog(portState, 'system', '正在恢复连接...')
+        connectPort(portState.id)
+      }
+    }
+
+    return restoredPorts.length > 0
   }
 
   // ===== 连接/断开 =====
@@ -412,6 +488,33 @@ export const usePortsStore = defineStore('ports', () => {
   // ===== 日志 =====
 
   const _addLog = (portState, direction, data, type = 'utf8', rawBytes = null) => {
+    if ((direction === 'rx' || direction === 'tx') && type === 'utf8') {
+      const chunks = splitUtf8TextChunks(data)
+
+      if (chunks.length > 1) {
+        for (const chunk of chunks) {
+          _addLog(portState, direction, chunk, type, null)
+        }
+        return
+      }
+    }
+
+    const lastLog = portState.logs[portState.logs.length - 1]
+    if (
+      lastLog &&
+      direction === 'rx' &&
+      type === 'utf8' &&
+      lastLog.dir === 'rx' &&
+      lastLog.type === 'utf8' &&
+      !String(lastLog.data || '').includes('\n') &&
+      !String(data || '').includes('\n')
+    ) {
+      lastLog.data += data
+      lastLog.rawBytes = concatBytes(lastLog.rawBytes, rawBytes)
+      lastLog.time = formatTime()
+      return
+    }
+
     portState.logs.push({
       id: Date.now() + Math.random(),
       time: formatTime(),
@@ -529,16 +632,16 @@ export const usePortsStore = defineStore('ports', () => {
   const _setupManagerCallbacks = (portState) => {
     const manager = portState._manager
 
-    manager.onData = (data) => {
+    manager.onChunk = (data) => {
       const incomingBytes = data.raw?.length ?? new TextEncoder().encode(data.text || '').length
       portState.totalRx += incomingBytes
 
-      // 1. 可选地记录到终端日志（高波特率默认静默，避免刷屏）
       if (portState.showTerminalRx) {
         _addLog(portState, 'rx', data.text, 'utf8', data.raw)
       }
+    }
 
-      // 2. 交给解析器
+    manager.onData = (data) => {
       if (portState._parser && data.raw) {
         const snapshots = portState._parser.feed(data.raw)
 
@@ -561,6 +664,7 @@ export const usePortsStore = defineStore('ports', () => {
     manager.onConnect = (info) => {
       portState.connected = true
       portState.connecting = false
+      portState.connectOnRestore = true
       portState.reconnecting = false
       portState.totalRx = 0
       portState.totalTx = 0
@@ -568,9 +672,13 @@ export const usePortsStore = defineStore('ports', () => {
       portState.txRate = 0
 
       if (portState.transportType === 'serial') {
+        const usbVendorId = info.port?.getInfo?.()?.usbVendorId
+        const usbProductId = info.port?.getInfo?.()?.usbProductId
+        portState.savedVendorId = usbVendorId ?? null
+        portState.savedProductId = usbProductId ?? null
         portState._lastPortInfo = {
-          vendorId: info.port?.getInfo?.()?.usbVendorId,
-          productId: info.port?.getInfo?.()?.usbProductId,
+          vendorId: usbVendorId,
+          productId: usbProductId,
           portName: portState.portName
         }
       } else {
@@ -611,6 +719,7 @@ export const usePortsStore = defineStore('ports', () => {
       } else {
         _stopAutoReconnect(portState)
         portState._lastPortInfo = null
+        portState.connectOnRestore = false
         _addLog(portState, 'system', '连接已断开')
       }
     }
@@ -658,6 +767,9 @@ export const usePortsStore = defineStore('ports', () => {
       label: p.label,
       transportType: p.transportType,
       portName: p.portName,
+      savedVendorId: p.savedVendorId,
+      savedProductId: p.savedProductId,
+      connectOnRestore: p.connectOnRestore,
       websocketUrl: p.websocketUrl,
       baudRate: p.baudRate,
       dataBits: p.dataBits,
@@ -695,6 +807,9 @@ export const usePortsStore = defineStore('ports', () => {
         dataBits: saved.dataBits,
         stopBits: saved.stopBits,
         parity: saved.parity,
+        savedVendorId: saved.savedVendorId,
+        savedProductId: saved.savedProductId,
+        connectOnRestore: saved.connectOnRestore,
         showTerminalRx: saved.showTerminalRx,
         terminalRxPreferenceLocked: saved.terminalRxPreferenceLocked,
         parserId: resolveParserId(saved.parserId),
@@ -707,6 +822,7 @@ export const usePortsStore = defineStore('ports', () => {
     }
 
     _recalcChannelOffsets()
+    rebindAuthorizedDevices()
   }
 
   // ===== 聚合 computed =====
@@ -749,6 +865,7 @@ export const usePortsStore = defineStore('ports', () => {
     requestPortDevice,
     getAuthorizedPorts,
     assignDevice,
+    rebindAuthorizedDevices,
     connectPort,
     disconnectPort,
     togglePort,
