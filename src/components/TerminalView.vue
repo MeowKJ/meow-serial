@@ -10,14 +10,19 @@ const selectedPortId = ref('')
 const terminalEl = ref(null)
 const inputCaptureEl = ref(null)
 const pendingInput = ref('')
+const analysisSendInput = ref('')
 const sendHistory = ref([])
 const historyIndex = ref(-1)
+const analysisHistoryIndex = ref(-1)
 const autoScroll = ref(true)
 const isTerminalFocused = ref(false)
 const showTimestamp = ref(true)
 const analysisDisplayMode = ref('UTF-8')
 const enableHexHoverTranslation = ref(true)
 const dataFilter = ref('all')
+const analysisAppendCR = ref(false)
+const analysisAppendLF = ref(true)
+const analysisSendAsHex = ref(false)
 const lastSeenSystemLogIdByPort = new Map()
 const hoveredHex = ref({ logId: null, byteIndex: -1 })
 const hoveredByteRange = ref({ start: null, end: null })
@@ -53,6 +58,7 @@ const canInteract = computed(() => {
   if (!sendTargetPortId.value) return false
   return portsStore.getPort(sendTargetPortId.value)?.connected === true
 })
+const canAnalysisSend = computed(() => canInteract.value && analysisSendInput.value.trim().length > 0)
 
 const mutedVisiblePorts = computed(() => {
   const port = selectedPort.value
@@ -70,7 +76,9 @@ watch(
 
 watch(selectedPortId, () => {
   pendingInput.value = ''
+  analysisSendInput.value = ''
   historyIndex.value = -1
+  analysisHistoryIndex.value = -1
   hoveredHex.value = { logId: null, byteIndex: -1 }
   hoveredByteRange.value = { start: null, end: null }
   visibleAnalysisLogIds.value = new Set()
@@ -974,6 +982,7 @@ const pushHistory = (command) => {
     }
   }
   historyIndex.value = -1
+  analysisHistoryIndex.value = -1
 }
 
 const navigateHistory = (direction) => {
@@ -996,6 +1005,26 @@ const navigateHistory = (direction) => {
   }
 }
 
+const navigateAnalysisHistory = (direction) => {
+  if (sendHistory.value.length === 0) return
+
+  if (direction === 'up') {
+    if (analysisHistoryIndex.value < sendHistory.value.length - 1) {
+      analysisHistoryIndex.value += 1
+      analysisSendInput.value = sendHistory.value[analysisHistoryIndex.value]
+    }
+    return
+  }
+
+  if (analysisHistoryIndex.value > 0) {
+    analysisHistoryIndex.value -= 1
+    analysisSendInput.value = sendHistory.value[analysisHistoryIndex.value]
+  } else if (analysisHistoryIndex.value === 0) {
+    analysisHistoryIndex.value = -1
+    analysisSendInput.value = ''
+  }
+}
+
 const sendRawHex = async (hex) => {
   if (!sendTargetPortId.value) return
   await portsStore.sendToPort(sendTargetPortId.value, hex, {
@@ -1003,6 +1032,22 @@ const sendRawHex = async (hex) => {
     appendLF: false,
     isHex: true
   })
+}
+
+const sendAnalysisInput = async () => {
+  if (!sendTargetPortId.value || !canInteract.value) return
+  const payload = analysisSendInput.value.trim()
+  if (!payload) return
+
+  pushHistory(payload)
+
+  await portsStore.sendToPort(sendTargetPortId.value, payload, {
+    appendCR: analysisAppendCR.value,
+    appendLF: analysisAppendLF.value,
+    isHex: analysisSendAsHex.value
+  })
+
+  analysisSendInput.value = ''
 }
 
 const submitPendingInput = async () => {
@@ -1105,6 +1150,25 @@ const handleTerminalKeyDown = async (event) => {
   if (event.key === 'Escape') {
     event.preventDefault()
     pendingInput.value = ''
+  }
+}
+
+const handleAnalysisInputKeyDown = async (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    await sendAnalysisInput()
+    return
+  }
+
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    navigateAnalysisHistory('up')
+    return
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    navigateAnalysisHistory('down')
   }
 }
 
@@ -1586,6 +1650,50 @@ onUnmounted(() => {
             @mousedown="startTimelineDrag"
             @touchstart="startTimelineDrag"
           />
+        </div>
+      </div>
+    </div>
+
+    <div v-if="terminalMode === '分析'" class="rounded-2xl border border-cat-border bg-cat-card px-3 py-3">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-3 text-xs text-cat-muted flex-wrap">
+          <span>分析模式发送</span>
+          <span>当前目标: {{ selectedPortLabel }}</span>
+          <span>Enter 发送</span>
+          <span>↑↓ 历史</span>
+        </div>
+
+        <div class="flex gap-3 flex-wrap">
+          <input
+            v-model="analysisSendInput"
+            :disabled="!canInteract"
+            :placeholder="analysisSendAsHex ? '输入 HEX 数据，如 01 03 0A FF' : '输入要发送的文本...'"
+            class="min-w-[16rem] flex-1 rounded-xl border border-cat-border bg-cat-surface px-3 py-2 text-sm text-cat-text disabled:opacity-50"
+            :class="analysisSendAsHex ? 'font-mono' : ''"
+            @keydown="handleAnalysisInputKeyDown"
+          >
+
+          <div class="flex items-center gap-3 text-xs text-cat-muted flex-wrap">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input v-model="analysisAppendCR" type="checkbox" class="accent-cat-primary">
+              +CR
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input v-model="analysisAppendLF" type="checkbox" class="accent-cat-primary">
+              +LF
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input v-model="analysisSendAsHex" type="checkbox" class="accent-cat-primary">
+              HEX发送
+            </label>
+            <button
+              @click="sendAnalysisInput"
+              :disabled="!canAnalysisSend"
+              class="cat-btn px-4 py-2 rounded-xl text-sm text-white disabled:opacity-50"
+            >
+              发送
+            </button>
+          </div>
         </div>
       </div>
     </div>
