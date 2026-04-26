@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === 'true' ? '/meow-serial/' : '/',
+  base: process.env.VITE_SERIAL_BASE || '/',
   plugins: [vue()],
   resolve: {
     alias: {

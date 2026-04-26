@@ -7,6 +7,7 @@ Meow Serial is a browser-based serial and WebSocket debugging workspace. It lets
 - AI manifest: `/.well-known/mserial-ai.json`
 - Protocol profile JSON Schema: `/ai/protocol-profile.schema.json`
 - Browser automation guide: `/ai/browser-automation.json`
+- Runtime metadata API: `/api/mserial`
 
 ## Primary AI Task
 
@@ -23,7 +24,7 @@ Return plain valid JSON when the user wants to import directly. Do not wrap dire
 ## Minimal Import Workflow
 
 1. Open the Meow Serial website.
-2. Open the Protocols tab.
+2. Open `/serial?tab=protocol` or enter the serial workspace and open the Protocols tab.
 3. Import the generated protocol JSON.
 4. Test parsing with sample input.
 5. Save and apply the protocol to the target port.

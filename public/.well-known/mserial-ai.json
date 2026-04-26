@@ -5,7 +5,7 @@
   "description": "Browser-based serial and WebSocket debugging workspace with importable protocol JSON profiles.",
   "homepage": ".",
   "serial_app": "serial",
-  "public_api": "api/mserial.json",
+  "public_api": "api/mserial",
   "llms_txt": "llms.txt",
   "capabilities": [
     "connect serial ports with Web Serial",

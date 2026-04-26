@@ -1,6 +1,6 @@
 # AI Public API
 
-Meow Serial is a static web app, so the AI-facing API is a set of public metadata files served with the site. These files let an AI agent discover how to generate protocol JSON and how to operate the UI with a browser.
+Meow Serial is deployed on Vercel with Next.js. The public homepage is served by Next.js, the serial workspace is built as a Vue sub-application under `/serial`, and the AI-facing API is exposed through both public metadata files and a Next.js API route.
 
 ## Published Files
 
@@ -8,7 +8,7 @@ Meow Serial is a static web app, so the AI-facing API is a set of public metadat
 - `/.well-known/mserial-ai.json`: machine-readable app manifest
 - `/ai/protocol-profile.schema.json`: JSON Schema for importable protocol profiles
 - `/ai/browser-automation.json`: stable selector map for browser agents
-- `/api/mserial.json`: public app metadata used by the landing page and AI agents
+- `/api/mserial`: dynamic Next.js API route with app metadata used by the landing page and AI agents
 
 ## How An AI Should Use The Site
 

@@ -1,12 +1,11 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useSerialStore } from './stores/serial'
 import { useI18nStore } from './stores/i18n'
 
 // Components
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
-import HomeView from './components/HomeView.vue'
 import CanvasView from './components/CanvasView.vue'
 import TerminalView from './components/TerminalView.vue'
 import ProtocolView from './components/ProtocolView.vue'
@@ -18,21 +17,9 @@ const store = useSerialStore()
 const i18n = useI18nStore()
 const basePath = import.meta.env.BASE_URL || '/'
 
-const withBase = (path) => {
-  const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`
-  const normalizedPath = String(path || '').replace(/^\/+/, '')
-  return `${normalizedBase}${normalizedPath}`
-}
-
-// 界面状态
-const getRouteFromLocation = () => {
-  const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`
-  let path = window.location.pathname
-  if (normalizedBase !== '/' && path.startsWith(normalizedBase)) {
-    path = `/${path.slice(normalizedBase.length)}`
-  }
-  path = path.replace(/\/+$/, '') || '/'
-  return path === '/serial' ? 'serial' : 'home'
+const getSerialUrl = (tab = 'canvas') => {
+  const serialRoot = basePath.replace(/\/+$/, '') || '/'
+  return tab === 'canvas' ? serialRoot : `${serialRoot}?tab=${tab}`
 }
 
 const getInitialSerialTab = () => {
@@ -40,7 +27,7 @@ const getInitialSerialTab = () => {
   return ['canvas', 'terminal', 'protocol'].includes(tab) ? tab : 'canvas'
 }
 
-const route = ref(getRouteFromLocation())
+// 界面状态
 const activeTab = ref(getInitialSerialTab())
 const tabs = computed(() => [
   { id: 'canvas', name: i18n.t('app.tabs.canvas'), icon: '🎨', emojiName: 'artistPalette' },
@@ -78,31 +65,15 @@ const clearAll = () => {
   store.clearAll()
 }
 
-const openSerial = (tab = 'canvas') => {
-  const safeTab = ['canvas', 'terminal', 'protocol'].includes(tab) ? tab : 'canvas'
-  activeTab.value = safeTab
-  route.value = 'serial'
-  const url = safeTab === 'canvas' ? withBase('serial') : `${withBase('serial')}?tab=${safeTab}`
-  window.history.pushState({ route: 'serial', tab: safeTab }, '', url)
-}
-
 const setSerialTab = (tab) => {
   if (!['canvas', 'terminal', 'protocol'].includes(tab)) return
   activeTab.value = tab
-  const url = tab === 'canvas' ? withBase('serial') : `${withBase('serial')}?tab=${tab}`
+  const url = getSerialUrl(tab)
   window.history.replaceState({ route: 'serial', tab }, '', url)
 }
 
 const openHome = () => {
-  route.value = 'home'
-  window.history.pushState({ route: 'home' }, '', withBase(''))
-}
-
-const syncRouteFromBrowser = () => {
-  route.value = getRouteFromLocation()
-  if (route.value === 'serial') {
-    activeTab.value = getInitialSerialTab()
-  }
+  window.location.href = '/'
 }
 
 const closeContextMenu = () => {
@@ -223,24 +194,11 @@ const handleWidgetAdded = (widget) => {
 // 全局点击关闭菜单
 onMounted(() => {
   document.addEventListener('click', closeContextMenu)
-  window.addEventListener('popstate', syncRouteFromBrowser)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', closeContextMenu)
-  window.removeEventListener('popstate', syncRouteFromBrowser)
 })
 </script>
 
 <template>
-  <HomeView
-    v-if="route === 'home'"
-    @open-protocol="openSerial('protocol')"
-    @open-canvas="openSerial('canvas')"
-    @open-terminal="openSerial('terminal')"
-  />
-
-  <div v-else class="h-screen flex flex-col overflow-hidden bg-cat-bg" data-ai="serial-app">
+  <div class="h-screen flex flex-col overflow-hidden bg-cat-bg" data-ai="serial-app">
     <!-- 顶部栏 -->
     <HeaderBar 
       :tabs="tabs"

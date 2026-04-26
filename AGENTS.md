@@ -1,11 +1,13 @@
 # AI Handoff Guide
 
-This project is a Vue 3 + Vite serial/WebSocket debugging workspace. The main user-facing areas are Canvas, Terminal, and Protocols. The Protocols area turns incoming bytes into named numeric channels that widgets can display.
+This project is deployed on Vercel with Next.js. The public homepage and API route live in `app/`; the serial/WebSocket debugging workspace is still a Vue 3 + Vite app built into `public/serial` and served under `/serial`.
 
 ## Fast Orientation
 
-- App bootstrap: `src/main.js`
-- Root layout/tabs: `src/App.vue`
+- Next homepage: `app/page.jsx`
+- Next metadata API: `app/api/mserial/route.js`
+- Serial app bootstrap: `src/main.js`
+- Serial app root/tabs: `src/App.vue`
 - Port and transport state: `src/stores/ports.js`
 - Global channels, widgets, workspace persistence: `src/stores/serial.js`
 - Protocol UI: `src/components/ProtocolView.vue`
@@ -17,6 +19,10 @@ This project is a Vue 3 + Vite serial/WebSocket debugging workspace. The main us
 ## Package Manager
 
 Use pnpm for all dependency and script commands. The repo intentionally keeps `pnpm-lock.yaml` and should not add `package-lock.json` or `yarn.lock`.
+
+- `pnpm dev`: run the Next.js app locally.
+- `pnpm dev:serial`: run the Vue serial workspace directly with Vite.
+- `pnpm build`: build the Vue serial workspace into `public/serial`, then run `next build`.
 
 ## Protocol Data Path
 

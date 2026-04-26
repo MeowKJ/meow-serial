@@ -11,7 +11,7 @@
   ],
   "navigation": {
     "home_path": ".",
-    "serial_path": "serial",
+    "serial_path": "/serial",
     "protocols_tab": "[data-ai=\"tab-protocol\"]",
     "terminal_tab": "[data-ai=\"tab-terminal\"]",
     "canvas_tab": "[data-ai=\"tab-canvas\"]"

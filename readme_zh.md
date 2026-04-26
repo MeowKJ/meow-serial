@@ -107,7 +107,7 @@ AI 应优先生成协议 JSON，而不是直接改源码。只有协议无法用
 /.well-known/mserial-ai.json
 /ai/protocol-profile.schema.json
 /ai/browser-automation.json
-/api/mserial.json
+/api/mserial
 ```
 
 这些文件的用途：
@@ -116,7 +116,7 @@ AI 应优先生成协议 JSON，而不是直接改源码。只有协议无法用
 - `/.well-known/mserial-ai.json`：机器可读的能力清单、schema 地址和自动化入口
 - `/ai/protocol-profile.schema.json`：可导入协议 JSON 的 JSON Schema
 - `/ai/browser-automation.json`：浏览器自动化选择器说明
-- `/api/mserial.json`：主页运行时读取的项目能力、入口和协议类型元数据
+- `/api/mserial`：Next.js API Route，返回项目能力、入口和协议类型元数据
 
 给 AI 的一句话任务模板：
 
@@ -325,11 +325,15 @@ public/
 │   └── ai-protocol-workflow.png
 ├── llms.txt
 ├── .well-known/mserial-ai.json
-├── api/
-│   └── mserial.json
 └── ai/
     ├── protocol-profile.schema.json
     └── browser-automation.json
+
+app/
+├── page.jsx              # 独立主页
+├── layout.jsx
+├── style.css
+└── api/mserial/route.js  # 动态 API Route
 
 docs/
 ├── ai-protocol-guide.md
@@ -346,8 +350,9 @@ docs/
 
 关键代码入口：
 
+- `app/page.jsx`：Next.js 独立主页
+- `app/api/mserial/route.js`：Vercel / Next.js API Route
 - `src/main.js`：注册 parser 并启动应用
-- `src/components/HomeView.vue`：首页和 AI 工作流入口
 - `src/components/ProtocolView.vue`：协议页面
 - `src/utils/protocolProfiles.js`：协议 JSON schema 的归一化和存储
 - `src/parsers/profileParserFactory.js`：把协议 JSON 转成可执行 parser

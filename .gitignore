@@ -6,6 +6,8 @@ node_modules/
 # 构建输出
 dist/
 build/
+.next/
+public/serial/
 *.local
 
 # 日志文件
