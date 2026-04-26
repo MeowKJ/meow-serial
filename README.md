@@ -1,153 +1,306 @@
-# Meow Serial Tool
+# Meow Serial
 
-[English](README.md) | [简体中文](readme_zh.md)
-
-> A cute serial debugging workspace for people who want to connect fast, inspect data, and build small live dashboards without wrestling with a giant toolchain.
+> 面向真实调试现场的浏览器串口 / WebSocket 工作台。连接设备、查看收发、生成协议、映射通道、搭建仪表盘，都在一个页面里完成。
 
 ![Version](https://img.shields.io/badge/version-2.0.0-ffb3c7)
 ![Vue](https://img.shields.io/badge/Vue-3.4-42b883)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff)
 ![License](https://img.shields.io/badge/license-MIT-8bd3dd)
 
-## What It Does
+## 项目定位
 
-Meow Serial Tool is a browser-based serial / WebSocket debugging app with three main work areas:
+Meow Serial 是一个基于浏览器的串口调试工具，也支持 WebSocket 数据源。它不是一个只展示界面的 demo，而是面向日常硬件调试、协议验证和小型实时看板搭建的工作区。
 
-- `Canvas`: build a live dashboard with draggable widgets
-- `Terminal`: inspect raw traffic and send commands
-- `Protocols`: configure parsers so incoming data becomes named channels
+核心目标：
 
-It is aimed at actual usage first: connect hardware, watch data, tweak settings, save the workspace, and come back later.
+- 快速连接串口或 WebSocket 设备
+- 在终端里确认 RX / TX 数据
+- 用协议 JSON 把原始数据解析成具名通道
+- 把通道绑定到波形、数值、仪表盘等控件
+- 导出完整工作区，换电脑或分享给别人继续用
+- 让 AI 能读懂网站、生成协议、甚至自动操作浏览器
 
-## Before You Start
+## 主要功能
 
-- Node.js 18+
-- A Chromium-based browser if you want to use Web Serial
-- Or a WebSocket endpoint if your device is exposed over the network
+### 多数据源接入
 
-## Install and Run
+- Web Serial 串口连接
+- WebSocket 设备流
+- 多端口管理
+- 波特率、数据位、停止位、校验位配置
+- 高波特率下自动降低终端刷屏压力，但解析和图表继续运行
 
-### Install dependencies
+### 终端调试
+
+- RX / TX 日志查看
+- UTF-8 与 HEX 发送
+- `CR` / `LF` 附加选项
+- 文件逐行发送
+- 收发统计与速率显示
+
+### 协议解析
+
+- 默认 Raw 原始模式
+- 文本数值行协议：CSV、空格、制表符、分号等分隔格式
+- JSON Lines 协议：每行一个 JSON 对象
+- 通用 TLV 二进制协议：magic word、包长、TLV 类型、payload 偏移映射
+- 协议 JSON 导入 / 导出
+- 协议测试输入框
+- 解析字段自动变成全局通道
+
+### 画布看板
+
+当前支持的控件包括：
+
+- 波形图
+- 迷你波形图
+- 数值显示
+- 仪表盘
+- FFT
+- 直方图
+- XY 图
+- 按钮
+- 滑块
+- 触发器
+- 迷你终端
+
+控件支持拖动、缩放、复制、图层调整和右侧设置面板配置。
+
+## AI 友好能力
+
+Meow Serial 的协议系统专门为 AI 协作做了入口。以后你可以把网站地址、设备手册、协议表或样例帧发给任意 AI，让 AI 生成可以直接导入的协议 JSON。
+
+![AI 协议工作流](public/images/ai-protocol-workflow.png)
+
+推荐工作流：
+
+1. 把设备协议说明、字段表、样例数据发给 AI。
+2. 让 AI 按 Meow Serial 协议 JSON schema 生成一个 JSON。
+3. 打开 Meow Serial 的 `协议` 页面。
+4. 点击 `导入 JSON`。
+5. 在协议测试框里粘贴样例数据，点击 `测试解析`。
+6. 确认通道名和值正确后，保存并应用到端口。
+
+AI 应优先生成协议 JSON，而不是直接改源码。只有协议无法用 `line-values`、`json-lines` 或 `tlv` 表达时，才需要新增自定义 parser 代码。
+
+## 页面结构
+
+部署后建议使用这两个主要页面：
+
+- `/`：独立主页，展示产品介绍、AI 协议工作流和公开 AI/API 入口
+- `/serial`：串口调试工作台，包含画布、终端和协议三个子页
+
+串口工作台支持带参数直达：
+
+```text
+/serial
+/serial?tab=terminal
+/serial?tab=protocol
+```
+
+## 公开给 AI 的网站接口
+
+如果这个项目部署成网站，AI 可以通过下面这些公开路径了解如何使用 Meow Serial：
+
+```text
+/llms.txt
+/.well-known/mserial-ai.json
+/ai/protocol-profile.schema.json
+/ai/browser-automation.json
+/api/mserial.json
+```
+
+这些文件的用途：
+
+- `/llms.txt`：给 AI 阅读的项目简介和推荐流程
+- `/.well-known/mserial-ai.json`：机器可读的能力清单、schema 地址和自动化入口
+- `/ai/protocol-profile.schema.json`：可导入协议 JSON 的 JSON Schema
+- `/ai/browser-automation.json`：浏览器自动化选择器说明
+- `/api/mserial.json`：主页运行时读取的项目能力、入口和协议类型元数据
+
+给 AI 的一句话任务模板：
+
+```text
+请根据我提供的设备协议资料，生成一个可导入 Meow Serial 的协议 JSON。
+只返回一个合法 JSON 对象，不要 Markdown，不要注释。
+协议类型只能使用 line-values、json-lines 或 tlv。
+如果是 TLV，请使用十进制偏移和类型号，并给出稳定的通道 label。
+```
+
+## 协议 JSON 示例
+
+### 文本数值行
+
+适合这样的输入：
+
+```text
+23.5, 48.1, 101.3
+```
+
+协议 JSON：
+
+```json
+{
+  "name": "环境传感器 CSV",
+  "description": "每行输出温度、湿度、气压三个数值",
+  "kind": "line-values",
+  "defaultBaudRate": 115200,
+  "heldChannels": [],
+  "heldWindowMs": 0,
+  "line": {
+    "separatorPattern": "[,\\t; ]+",
+    "channelNames": ["temperature", "humidity", "pressure"]
+  }
+}
+```
+
+### JSON Lines
+
+适合这样的输入：
+
+```json
+{"bpm":16.8,"confidence":2.74,"data":{"temperature":36.5}}
+```
+
+协议 JSON：
+
+```json
+{
+  "name": "JSON 呼吸传感器",
+  "description": "每行一个 JSON 对象，提取呼吸率、置信度和温度",
+  "kind": "json-lines",
+  "defaultBaudRate": 115200,
+  "heldChannels": ["bpm"],
+  "heldWindowMs": 3000,
+  "json": {
+    "fieldPaths": ["bpm", "confidence", "data.temperature"]
+  }
+}
+```
+
+### TLV 二进制协议
+
+适合带包头、包长、TLV 类型和 payload 的二进制协议：
+
+```json
+{
+  "name": "示例 TLV 设备",
+  "description": "二进制 TLV 数据包，提取 BPM 和 confidence",
+  "kind": "tlv",
+  "defaultBaudRate": 921600,
+  "heldChannels": ["BPM", "confidence"],
+  "heldWindowMs": 3000,
+  "tlv": {
+    "magicWordHex": "02 01 04 03 06 05 08 07",
+    "headerSize": 40,
+    "packetLengthOffset": 12,
+    "packetLengthType": "u32",
+    "packetLengthEndian": "little",
+    "tlvCountOffset": 32,
+    "tlvCountType": "u32",
+    "tlvCountEndian": "little",
+    "tlvHeaderSize": 8,
+    "tlvTypeOffset": 0,
+    "tlvTypeType": "u32",
+    "tlvLengthOffset": 4,
+    "tlvLengthType": "u32",
+    "tlvHeaderEndian": "little",
+    "tlvLengthIncludesHeader": false,
+    "mappings": [
+      {
+        "label": "BPM",
+        "tlvType": 1001,
+        "valueOffset": 0,
+        "valueType": "f32",
+        "endian": "little",
+        "scale": 1,
+        "unit": "bpm"
+      },
+      {
+        "label": "confidence",
+        "tlvType": 1001,
+        "valueOffset": 4,
+        "valueType": "f32",
+        "endian": "little",
+        "scale": 1,
+        "unit": ""
+      }
+    ]
+  }
+}
+```
+
+## 浏览器自动化友好
+
+协议页面已经为 AI 浏览器操作提供稳定选择器。自动化脚本或浏览器代理应该优先使用 `data-ai`，不要依赖中文按钮文本。
+
+常用选择器：
+
+```text
+[data-ai="tab-protocol"]              打开协议页
+[data-ai="protocol-view"]             协议页容器
+[data-ai="new-line-protocol"]         新建文本协议
+[data-ai="new-tlv-protocol"]          新建 TLV 协议
+[data-ai="protocol-name"]             协议名称
+[data-ai="protocol-kind"]             协议类型
+[data-ai="protocol-baud-rate"]        推荐波特率
+[data-ai="protocol-description"]      协议描述
+[data-ai="protocol-test-input"]       测试输入
+[data-ai="protocol-test-output"]      解析结果
+[data-ai="test-protocol"]             测试解析
+[data-ai="save-protocol"]             保存协议
+[data-ai="save-and-apply-protocol"]   保存并应用到当前端口
+[data-ai="import-protocol-json"]      导入协议 JSON
+[data-ai="export-protocol-json"]      导出协议 JSON
+```
+
+完整选择器表见：
+
+- [docs/ai-public-api.md](docs/ai-public-api.md)
+- [public/ai/browser-automation.json](public/ai/browser-automation.json)
+
+## 使用流程
+
+### 1. 启动项目
 
 ```bash
 pnpm install
-```
-
-### Start the app
-
-```bash
 pnpm dev
 ```
 
-Then open the local Vite URL shown in the terminal.
+然后打开终端里显示的 Vite 本地地址。默认 `/` 是独立主页，串口工具在 `/serial`。
 
-## How to Use
+### 2. 添加端口
 
-### 1. Add or configure a port
+在左侧栏添加串口或 WebSocket 端口，设置波特率和传输参数，选择设备并连接。
 
-Use the left sidebar to:
+### 3. 先看终端
 
-- add a serial port or WebSocket port
-- set baud rate and transport settings
-- choose the target device
-- connect or disconnect
+进入 `终端` 页，确认设备确实有数据进入，也确认发送命令能被设备接收。
 
-### 2. Choose a parser
+### 4. 配协议
 
-Open the `Protocols` tab when your incoming data is not just plain text.
+进入 `协议` 页，可以手动新建协议，也可以导入 AI 生成的协议 JSON。测试通过后保存并应用到端口。
 
-You can:
+### 5. 搭看板
 
-- keep `raw` for plain terminal-style debugging
-- choose a built-in parser
-- create or edit protocol profiles
-- map parsed fields into named channels
+回到 `画布`，添加波形图、数值卡片、仪表盘等控件，把它们绑定到解析出来的通道。
 
-Once a parser is active, parsed values show up as channels and can be used by widgets.
+### 6. 导出工作区
 
-### 3. Inspect traffic in Terminal
+顶部栏可以导出完整工作区 JSON。它会保存端口、协议、控件、布局、主题和语言设置。
 
-Use the `Terminal` tab to:
+## 开发说明
 
-- inspect RX / TX logs
-- switch display formats
-- send text or HEX commands
-- use append `CR` / `LF`
-- export logs when needed
+### 环境要求
 
-This is the best place to verify that the device is talking before you spend time building a dashboard.
+- Node.js 18+
+- pnpm
+- 使用 Web Serial 时建议使用 Chromium 内核浏览器
 
-### 4. Build a dashboard in Canvas
+本仓库统一使用 pnpm 作为包管理器。请不要提交 `package-lock.json` 或 `yarn.lock`。
 
-Use the `Widgets` button in the top bar to add widgets such as:
-
-- waveform
-- sparkline
-- value card
-- gauge
-- FFT
-- histogram
-- XY plot
-- button
-- slider
-- trigger
-- mini terminal
-
-Widgets can be dragged, resized, duplicated, layered, and configured from the right-side settings panel.
-
-### 5. Configure control widgets
-
-Control widgets are meant to be useful immediately, not just decorative.
-
-For example, the button widget now supports:
-
-- better default size for direct clicking
-- label and command editing
-- style presets
-- UTF-8 text or HEX send mode
-- `CR` / `LF` options
-
-When you add a button widget, its settings panel opens automatically so you can configure it right away.
-
-### 6. Save your workspace
-
-Workspace JSON can preserve:
-
-- widgets and layout
-- ports and parser choices
-- theme settings
-- canvas background mode
-- UI locale
-
-Use export / import from the top bar when you want to move setups between machines or keep named snapshots.
-
-## Useful Workflow
-
-For most devices, the smoothest flow is:
-
-1. Connect the port
-2. Confirm traffic in `Terminal`
-3. Pick or build a parser in `Protocols`
-4. Verify channels are updating
-5. Add widgets in `Canvas`
-6. Export the workspace once it looks good
-
-## i18n
-
-The app includes lightweight built-in i18n support.
-
-- Supported locales: `zh-CN`, `en`
-- Switch language from the top-right language toggle
-- Locale is saved locally
-- Locale is also stored in workspace JSON
-
-Current coverage focuses on the app shell, widget catalog, and key setup flows.
-
-## Development
-
-Development is intentionally simple.
-
-### Common commands
+### 常用命令
 
 ```bash
 pnpm dev
@@ -155,30 +308,57 @@ pnpm build
 pnpm preview
 ```
 
-### Main folders
+### 主要目录
 
 ```text
 src/
-├── components/   # App shell and views
-├── widgets/      # Dashboard widgets
-├── stores/       # Pinia state
-├── parsers/      # Parser registry and built-ins
-├── utils/        # Serial, storage, export helpers
-├── i18n/         # Translation messages and helpers
-└── styles/       # Global styles
+├── components/   # 页面壳层和主视图
+├── widgets/      # 画布控件
+├── stores/       # Pinia 状态管理
+├── parsers/      # 协议解析器
+├── utils/        # 串口、存储、导出等工具
+├── i18n/         # 多语言消息与辅助函数
+└── styles/       # 全局样式
+
+public/
+├── images/
+│   └── ai-protocol-workflow.png
+├── llms.txt
+├── .well-known/mserial-ai.json
+├── api/
+│   └── mserial.json
+└── ai/
+    ├── protocol-profile.schema.json
+    └── browser-automation.json
+
+docs/
+├── ai-protocol-guide.md
+└── ai-public-api.md
 ```
 
-If you are extending the project, the usual entry points are:
+## 给后续 AI 的开发入口
 
-- `src/components/` for app-level UI
-- `src/widgets/` for new dashboard controls
-- `src/parsers/` for protocol support
-- `src/i18n/` for translation coverage
+如果要继续扩展这个项目，优先阅读：
 
-## License
+- [AGENTS.md](AGENTS.md)
+- [docs/ai-protocol-guide.md](docs/ai-protocol-guide.md)
+- [docs/ai-public-api.md](docs/ai-public-api.md)
+
+关键代码入口：
+
+- `src/main.js`：注册 parser 并启动应用
+- `src/components/HomeView.vue`：首页和 AI 工作流入口
+- `src/components/ProtocolView.vue`：协议页面
+- `src/utils/protocolProfiles.js`：协议 JSON schema 的归一化和存储
+- `src/parsers/profileParserFactory.js`：把协议 JSON 转成可执行 parser
+- `src/utils/parserRegistry.js`：parser 注册表
+- `src/stores/ports.js`：端口、连接和 parser 调用
+- `src/stores/serial.js`：全局通道、历史数据和工作区持久化
+
+## 许可证
 
 MIT
 
 ---
 
-Made with paws, packets, and a healthy respect for debugging sessions.
+Meow Serial 希望把串口调试做得更直接一点：先看见数据，再理解协议，最后把现场变成可以复用的工作区。

@@ -1,0 +1,37 @@
+# Meow Serial
+
+Meow Serial is a browser-based serial and WebSocket debugging workspace. It lets users connect devices, inspect RX/TX traffic, create importable protocol JSON profiles, and map parsed fields into dashboard channels.
+
+## AI Entry Points
+
+- AI manifest: `/.well-known/mserial-ai.json`
+- Protocol profile JSON Schema: `/ai/protocol-profile.schema.json`
+- Browser automation guide: `/ai/browser-automation.json`
+
+## Primary AI Task
+
+When a user gives an AI a device manual, sample serial frames, field table, or protocol description, the AI should generate one importable Meow Serial protocol JSON profile.
+
+The protocol profile must use one of these `kind` values:
+
+- `line-values`: one text line contains separated numeric fields
+- `json-lines`: one text line contains a JSON object with numeric fields
+- `tlv`: binary packet with packet length, TLV headers, and numeric fields at fixed payload offsets
+
+Return plain valid JSON when the user wants to import directly. Do not wrap direct-import JSON in Markdown.
+
+## Minimal Import Workflow
+
+1. Open the Meow Serial website.
+2. Open the Protocols tab.
+3. Import the generated protocol JSON.
+4. Test parsing with sample input.
+5. Save and apply the protocol to the target port.
+6. Confirm named channels appear for widgets.
+
+## Important Notes
+
+- Source code changes are only needed when a protocol cannot fit the JSON profile schema.
+- Supported TLV value types are `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `f32`, and `f64`.
+- Use decimal numbers for offsets, lengths, TLV type IDs, baud rates, and scale values.
+- Use spaced uppercase hex for `magicWordHex`, for example `02 01 04 03 06 05 08 07`.

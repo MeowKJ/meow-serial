@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@meowkj/fluent-emoji-assets':
+        specifier: ^0.1.0
+        version: 0.1.0
       pinia:
         specifier: ^2.1.7
         version: 2.3.1(vue@3.5.26)
@@ -204,6 +207,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@meowkj/fluent-emoji-assets@0.1.0':
+    resolution: {integrity: sha512-nQVhON9DZpQlTSJwUgT+JIgJ0THgUeJ4V6ziUf8tl+VwLENKsOKagvy0DaObfAneMT3sT0O+CFWEyRMpoAnttQ==}
+    engines: {node: '>=18'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -873,6 +880,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@meowkj/fluent-emoji-assets@0.1.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

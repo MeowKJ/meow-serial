@@ -288,7 +288,7 @@ if (!draftProfile.value.tlv.mappings.length) {
 </script>
 
 <template>
-  <div class="h-full overflow-auto p-6">
+  <div class="h-full overflow-auto p-6" data-ai="protocol-view">
     <div class="max-w-6xl mx-auto space-y-6">
 
       <div class="flex items-center gap-3">
@@ -301,14 +301,15 @@ if (!draftProfile.value.tlv.mappings.length) {
         </div>
       </div>
 
-      <div class="bg-cat-card rounded-2xl border border-cat-border p-4 space-y-3">
+      <div class="bg-cat-card rounded-2xl border border-cat-border p-4 space-y-3" data-ai="protocol-port-panel">
         <div class="flex flex-wrap items-center gap-3">
           <div class="text-sm text-cat-muted">当前端口</div>
-          <div v-if="portsStore.ports.length > 0" class="flex flex-wrap gap-2">
+          <div v-if="portsStore.ports.length > 0" class="flex flex-wrap gap-2" data-ai="protocol-port-list">
             <button
               v-for="port in portsStore.ports"
               :key="port.id"
               @click="selectedPortId = port.id"
+              :data-ai="`protocol-port-${port.id}`"
               :class="[
                 'px-3 py-2 rounded-lg text-sm border transition-colors',
                 selectedPortId === port.id
@@ -340,15 +341,15 @@ if (!draftProfile.value.tlv.mappings.length) {
       </div>
 
       <div class="grid xl:grid-cols-[1.1fr_1.4fr] gap-6">
-        <section class="bg-cat-card rounded-2xl border border-cat-border p-4 space-y-4">
+        <section class="bg-cat-card rounded-2xl border border-cat-border p-4 space-y-4" data-ai="protocol-library">
           <div class="flex items-center justify-between">
             <div>
               <h3 class="font-medium">协议库</h3>
               <p class="text-xs text-cat-muted mt-1">选一个现有协议应用到当前端口，或者继续编辑右侧草稿。</p>
             </div>
             <div class="flex gap-2">
-              <button @click="createNewProfile('line-values')" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-xs">新建文本协议</button>
-              <button @click="createNewProfile('tlv')" class="cat-btn px-3 py-1.5 rounded-lg text-xs text-white">新建 TLV 协议</button>
+              <button @click="createNewProfile('line-values')" data-ai="new-line-protocol" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-xs">新建文本协议</button>
+              <button @click="createNewProfile('tlv')" data-ai="new-tlv-protocol" class="cat-btn px-3 py-1.5 rounded-lg text-xs text-white">新建 TLV 协议</button>
             </div>
           </div>
 
@@ -356,6 +357,7 @@ if (!draftProfile.value.tlv.mappings.length) {
             <div
               v-for="parser in availableProtocolCards"
               :key="parser.id"
+              :data-ai="`protocol-card-${parser.id}`"
               class="rounded-xl border border-cat-border bg-cat-surface/70 p-3"
             >
               <div class="flex items-start gap-3">
@@ -374,6 +376,7 @@ if (!draftProfile.value.tlv.mappings.length) {
                 <button
                   v-if="selectedPort"
                   @click="applyParser(parser.id)"
+                  :data-ai="`apply-parser-${parser.id}`"
                   class="cat-btn-secondary px-3 py-1.5 rounded-lg text-xs"
                 >
                   应用到当前端口
@@ -381,6 +384,7 @@ if (!draftProfile.value.tlv.mappings.length) {
                 <button
                   v-if="!parser.builtin && parser.profileId"
                   @click="startEditingProfile(parser.profileId)"
+                  :data-ai="`edit-profile-${parser.profileId}`"
                   class="cat-btn-secondary px-3 py-1.5 rounded-lg text-xs"
                 >
                   编辑
@@ -388,6 +392,7 @@ if (!draftProfile.value.tlv.mappings.length) {
                 <button
                   v-if="!parser.builtin && parser.profileId"
                   @click="exportSavedProfile(parser.profileId)"
+                  :data-ai="`export-profile-${parser.profileId}`"
                   class="cat-btn-secondary px-3 py-1.5 rounded-lg text-xs"
                 >
                   导出 JSON
@@ -395,6 +400,7 @@ if (!draftProfile.value.tlv.mappings.length) {
                 <button
                   v-if="!parser.builtin && parser.profileId"
                   @click="removeProfile(parser.profileId)"
+                  :data-ai="`delete-profile-${parser.profileId}`"
                   class="px-3 py-1.5 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                 >
                   删除
@@ -404,7 +410,7 @@ if (!draftProfile.value.tlv.mappings.length) {
           </div>
         </section>
 
-        <section class="bg-cat-card rounded-2xl border border-cat-border p-4 space-y-4">
+        <section class="bg-cat-card rounded-2xl border border-cat-border p-4 space-y-4" data-ai="protocol-editor">
           <div class="flex items-center justify-between">
             <div>
               <h3 class="font-medium">{{ editingProfileId ? '编辑协议' : '新建协议' }}</h3>
@@ -418,11 +424,11 @@ if (!draftProfile.value.tlv.mappings.length) {
           <div class="grid md:grid-cols-2 gap-4">
             <div>
               <label class="text-xs text-cat-muted block mb-1">协议名称</label>
-              <input v-model="draftProfile.name" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="例如：6843 TLV 呼吸协议">
+              <input v-model="draftProfile.name" data-ai="protocol-name" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="例如：6843 TLV 呼吸协议">
             </div>
             <div>
               <label class="text-xs text-cat-muted block mb-1">协议类型</label>
-              <select v-model="draftProfile.kind" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+              <select v-model="draftProfile.kind" data-ai="protocol-kind" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                 <option value="line-values">文本数值行</option>
                 <option value="json-lines">JSON 行</option>
                 <option value="tlv">TLV 二进制</option>
@@ -430,17 +436,17 @@ if (!draftProfile.value.tlv.mappings.length) {
             </div>
             <div>
               <label class="text-xs text-cat-muted block mb-1">推荐波特率</label>
-              <input v-model.number="draftProfile.defaultBaudRate" type="number" min="1" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+              <input v-model.number="draftProfile.defaultBaudRate" data-ai="protocol-baud-rate" type="number" min="1" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
             </div>
             <div>
               <label class="text-xs text-cat-muted block mb-1">Value Hold 窗口（ms）</label>
-              <input v-model.number="draftProfile.heldWindowMs" type="number" min="0" step="100" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+              <input v-model.number="draftProfile.heldWindowMs" data-ai="protocol-hold-window-ms" type="number" min="0" step="100" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
             </div>
           </div>
 
           <div>
             <label class="text-xs text-cat-muted block mb-1">描述</label>
-            <textarea v-model="draftProfile.description" rows="2" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="写一点协议说明，方便以后辨认"></textarea>
+            <textarea v-model="draftProfile.description" data-ai="protocol-description" rows="2" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="写一点协议说明，方便以后辨认"></textarea>
           </div>
 
           <div>
@@ -448,6 +454,7 @@ if (!draftProfile.value.tlv.mappings.length) {
             <input
               :value="draftProfile.heldChannels.join(', ')"
               @input="draftProfile.heldChannels = $event.target.value.split(',').map(item => item.trim()).filter(Boolean)"
+              data-ai="protocol-held-channels"
               class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm"
               placeholder="例如：BPM, 置信度"
             >
@@ -457,13 +464,14 @@ if (!draftProfile.value.tlv.mappings.length) {
             <div class="grid md:grid-cols-2 gap-4">
               <div>
                 <label class="text-xs text-cat-muted block mb-1">分隔正则</label>
-                <input v-model="draftProfile.line.separatorPattern" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="例如：[,\t; ]+">
+                <input v-model="draftProfile.line.separatorPattern" data-ai="line-separator-pattern" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="例如：[,\t; ]+">
               </div>
               <div>
                 <label class="text-xs text-cat-muted block mb-1">通道名（逗号分隔，可选）</label>
                 <input
                   :value="draftProfile.line.channelNames.join(', ')"
                   @input="draftProfile.line.channelNames = $event.target.value.split(',').map(item => item.trim()).filter(Boolean)"
+                  data-ai="line-channel-names"
                   class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm"
                   placeholder="例如：温度, 湿度, 气压"
                 >
@@ -477,6 +485,7 @@ if (!draftProfile.value.tlv.mappings.length) {
               <input
                 :value="draftProfile.json.fieldPaths.join(', ')"
                 @input="draftProfile.json.fieldPaths = $event.target.value.split(',').map(item => item.trim()).filter(Boolean)"
+                data-ai="json-field-paths"
                 class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm"
                 placeholder="例如：bpm, conf, data.temp"
               >
@@ -487,27 +496,27 @@ if (!draftProfile.value.tlv.mappings.length) {
             <div class="grid md:grid-cols-2 gap-4">
               <div>
                 <label class="text-xs text-cat-muted block mb-1">Magic Word（十六进制，可空）</label>
-                <input v-model="draftProfile.tlv.magicWordHex" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="例如：02 01 04 03 06 05 08 07">
+                <input v-model="draftProfile.tlv.magicWordHex" data-ai="tlv-magic-word" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="例如：02 01 04 03 06 05 08 07">
               </div>
               <div>
                 <label class="text-xs text-cat-muted block mb-1">Header 长度</label>
-                <input v-model.number="draftProfile.tlv.headerSize" type="number" min="8" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                <input v-model.number="draftProfile.tlv.headerSize" data-ai="tlv-header-size" type="number" min="8" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
               </div>
               <div>
                 <label class="text-xs text-cat-muted block mb-1">包长偏移</label>
-                <input v-model.number="draftProfile.tlv.packetLengthOffset" type="number" min="0" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                <input v-model.number="draftProfile.tlv.packetLengthOffset" data-ai="tlv-packet-length-offset" type="number" min="0" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">包长类型</label>
-                  <select v-model="draftProfile.tlv.packetLengthType" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <select v-model="draftProfile.tlv.packetLengthType" data-ai="tlv-packet-length-type" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                     <option value="u16">u16</option>
                     <option value="u32">u32</option>
                   </select>
                 </div>
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">包长字节序</label>
-                  <select v-model="draftProfile.tlv.packetLengthEndian" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <select v-model="draftProfile.tlv.packetLengthEndian" data-ai="tlv-packet-length-endian" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                     <option value="little">Little</option>
                     <option value="big">Big</option>
                   </select>
@@ -515,19 +524,19 @@ if (!draftProfile.value.tlv.mappings.length) {
               </div>
               <div>
                 <label class="text-xs text-cat-muted block mb-1">TLV 数量偏移（填 -1 表示不用）</label>
-                <input v-model.number="draftProfile.tlv.tlvCountOffset" type="number" min="-1" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                <input v-model.number="draftProfile.tlv.tlvCountOffset" data-ai="tlv-count-offset" type="number" min="-1" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">TLV 数量类型</label>
-                  <select v-model="draftProfile.tlv.tlvCountType" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <select v-model="draftProfile.tlv.tlvCountType" data-ai="tlv-count-type" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                     <option value="u16">u16</option>
                     <option value="u32">u32</option>
                   </select>
                 </div>
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">TLV 数量字节序</label>
-                  <select v-model="draftProfile.tlv.tlvCountEndian" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <select v-model="draftProfile.tlv.tlvCountEndian" data-ai="tlv-count-endian" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                     <option value="little">Little</option>
                     <option value="big">Big</option>
                   </select>
@@ -535,20 +544,20 @@ if (!draftProfile.value.tlv.mappings.length) {
               </div>
               <div>
                 <label class="text-xs text-cat-muted block mb-1">TLV Header 长度</label>
-                <input v-model.number="draftProfile.tlv.tlvHeaderSize" type="number" min="4" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                <input v-model.number="draftProfile.tlv.tlvHeaderSize" data-ai="tlv-record-header-size" type="number" min="4" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
               </div>
               <div class="grid grid-cols-3 gap-2">
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">Type 偏移</label>
-                  <input v-model.number="draftProfile.tlv.tlvTypeOffset" type="number" min="0" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <input v-model.number="draftProfile.tlv.tlvTypeOffset" data-ai="tlv-type-offset" type="number" min="0" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                 </div>
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">Length 偏移</label>
-                  <input v-model.number="draftProfile.tlv.tlvLengthOffset" type="number" min="0" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <input v-model.number="draftProfile.tlv.tlvLengthOffset" data-ai="tlv-length-offset" type="number" min="0" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                 </div>
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">TLV 字节序</label>
-                  <select v-model="draftProfile.tlv.tlvHeaderEndian" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <select v-model="draftProfile.tlv.tlvHeaderEndian" data-ai="tlv-header-endian" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                     <option value="little">Little</option>
                     <option value="big">Big</option>
                   </select>
@@ -557,14 +566,14 @@ if (!draftProfile.value.tlv.mappings.length) {
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">Type 类型</label>
-                  <select v-model="draftProfile.tlv.tlvTypeType" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <select v-model="draftProfile.tlv.tlvTypeType" data-ai="tlv-type-type" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                     <option value="u16">u16</option>
                     <option value="u32">u32</option>
                   </select>
                 </div>
                 <div>
                   <label class="text-xs text-cat-muted block mb-1">Length 类型</label>
-                  <select v-model="draftProfile.tlv.tlvLengthType" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+                  <select v-model="draftProfile.tlv.tlvLengthType" data-ai="tlv-length-type" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
                     <option value="u16">u16</option>
                     <option value="u32">u32</option>
                   </select>
@@ -573,7 +582,7 @@ if (!draftProfile.value.tlv.mappings.length) {
             </div>
 
             <label class="flex items-center gap-2 text-sm text-cat-muted">
-              <input v-model="draftProfile.tlv.tlvLengthIncludesHeader" type="checkbox" class="accent-cat-primary">
+              <input v-model="draftProfile.tlv.tlvLengthIncludesHeader" data-ai="tlv-length-includes-header" type="checkbox" class="accent-cat-primary">
               TLV 的 length 字段包含 TLV Header 自身
             </label>
 
@@ -583,32 +592,33 @@ if (!draftProfile.value.tlv.mappings.length) {
                   <h4 class="font-medium text-sm">字段映射</h4>
                   <p class="text-xs text-cat-muted mt-1">按 TLV 类型和 payload 偏移提取值，决定最终显示的通道。</p>
                 </div>
-                <button @click="addTlvMapping" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-xs">添加字段</button>
+                <button @click="addTlvMapping" data-ai="add-tlv-mapping" class="cat-btn-secondary px-3 py-1.5 rounded-lg text-xs">添加字段</button>
               </div>
 
               <div
                 v-for="mapping in draftProfile.tlv.mappings"
                 :key="mapping.id"
+                data-ai="tlv-mapping"
                 class="rounded-xl border border-cat-border bg-cat-surface/70 p-3 space-y-3"
               >
                 <div class="grid md:grid-cols-2 gap-3">
                   <div>
                     <label class="text-xs text-cat-muted block mb-1">标签名</label>
-                    <input v-model="mapping.label" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="例如：BPM">
+                    <input v-model="mapping.label" data-ai="tlv-mapping-label" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="例如：BPM">
                   </div>
                   <div>
                     <label class="text-xs text-cat-muted block mb-1">TLV 类型号</label>
-                    <input v-model.number="mapping.tlvType" type="number" min="0" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
+                    <input v-model.number="mapping.tlvType" data-ai="tlv-mapping-type" type="number" min="0" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
                   </div>
                 </div>
                 <div class="grid md:grid-cols-4 gap-3">
                   <div>
                     <label class="text-xs text-cat-muted block mb-1">值偏移</label>
-                    <input v-model.number="mapping.valueOffset" type="number" min="0" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
+                    <input v-model.number="mapping.valueOffset" data-ai="tlv-mapping-value-offset" type="number" min="0" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
                   </div>
                   <div>
                     <label class="text-xs text-cat-muted block mb-1">值类型</label>
-                    <select v-model="mapping.valueType" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
+                    <select v-model="mapping.valueType" data-ai="tlv-mapping-value-type" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
                       <option value="u8">u8</option>
                       <option value="i8">i8</option>
                       <option value="u16">u16</option>
@@ -621,19 +631,19 @@ if (!draftProfile.value.tlv.mappings.length) {
                   </div>
                   <div>
                     <label class="text-xs text-cat-muted block mb-1">字节序</label>
-                    <select v-model="mapping.endian" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
+                    <select v-model="mapping.endian" data-ai="tlv-mapping-endian" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
                       <option value="little">Little</option>
                       <option value="big">Big</option>
                     </select>
                   </div>
                   <div>
                     <label class="text-xs text-cat-muted block mb-1">缩放倍率</label>
-                    <input v-model.number="mapping.scale" type="number" step="0.01" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
+                    <input v-model.number="mapping.scale" data-ai="tlv-mapping-scale" type="number" step="0.01" class="w-full bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm">
                   </div>
                 </div>
                 <div class="flex items-center justify-between">
-                  <input v-model="mapping.unit" class="flex-1 bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="单位（可选），例如 bpm / °C">
-                  <button @click="removeTlvMapping(mapping.id)" class="ml-3 px-3 py-2 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+                  <input v-model="mapping.unit" data-ai="tlv-mapping-unit" class="flex-1 bg-cat-dark border border-cat-border rounded-lg px-3 py-2 text-sm" placeholder="单位（可选），例如 bpm / °C">
+                  <button @click="removeTlvMapping(mapping.id)" data-ai="remove-tlv-mapping" class="ml-3 px-3 py-2 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
                     删除字段
                   </button>
                 </div>
@@ -642,16 +652,17 @@ if (!draftProfile.value.tlv.mappings.length) {
           </div>
 
           <div class="flex flex-wrap gap-2">
-            <button @click="saveDraftProfile()" class="cat-btn px-4 py-2 rounded-lg text-white text-sm">保存协议</button>
-            <button v-if="selectedPort" @click="saveDraftProfile({ applyToPort: true })" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">保存并应用到当前端口</button>
-            <button @click="testDraftProfile" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">测试解析</button>
-            <button @click="exportDraftProfile" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">导出 JSON</button>
-            <button @click="triggerImportProfile" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">导入 JSON</button>
-            <button @click="createNewProfile(draftProfile.kind)" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">清空草稿</button>
+            <button @click="saveDraftProfile()" data-ai="save-protocol" class="cat-btn px-4 py-2 rounded-lg text-white text-sm">保存协议</button>
+            <button v-if="selectedPort" @click="saveDraftProfile({ applyToPort: true })" data-ai="save-and-apply-protocol" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">保存并应用到当前端口</button>
+            <button @click="testDraftProfile" data-ai="test-protocol" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">测试解析</button>
+            <button @click="exportDraftProfile" data-ai="export-protocol-json" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">导出 JSON</button>
+            <button @click="triggerImportProfile" data-ai="import-protocol-json" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">导入 JSON</button>
+            <button @click="createNewProfile(draftProfile.kind)" data-ai="clear-protocol-draft" class="cat-btn-secondary px-4 py-2 rounded-lg text-sm">清空草稿</button>
             <input
               ref="importFileInput"
               type="file"
               accept="application/json,.json"
+              data-ai="protocol-json-file-input"
               class="hidden"
               @change="importProfileFromFile"
             >
@@ -662,6 +673,7 @@ if (!draftProfile.value.tlv.mappings.length) {
               <label class="text-xs text-cat-muted block mb-1">测试输入</label>
               <textarea
                 v-model="protocolTestInput"
+                data-ai="protocol-test-input"
                 rows="7"
                 class="w-full bg-cat-surface border border-cat-border rounded-xl px-3 py-2 font-mono text-sm"
                 :placeholder="testInputPlaceholder"
@@ -669,7 +681,7 @@ if (!draftProfile.value.tlv.mappings.length) {
             </div>
             <div>
               <label class="text-xs text-cat-muted block mb-1">解析结果</label>
-              <div class="h-full min-h-[170px] bg-cat-surface border border-cat-border rounded-xl px-3 py-2 font-mono text-sm text-green-400 overflow-auto whitespace-pre-wrap">
+              <div data-ai="protocol-test-output" class="h-full min-h-[170px] bg-cat-surface border border-cat-border rounded-xl px-3 py-2 font-mono text-sm text-green-400 overflow-auto whitespace-pre-wrap">
                 {{ protocolTestResult }}
               </div>
             </div>

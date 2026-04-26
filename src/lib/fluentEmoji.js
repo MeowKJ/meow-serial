@@ -6,4 +6,4 @@ export {
   getFluentEmojiMeta,
   getFluentEmojiUrl,
   hasFluentEmoji
-} from '../../packages/fluent-emoji-cdn/index.js'
+} from '@meowkj/fluent-emoji-assets'

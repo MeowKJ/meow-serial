@@ -6,6 +6,7 @@ export const messages = {
   'zh-CN': {
     app: {
       tabs: {
+        home: '首页喵',
         canvas: '画布喵',
         terminal: '终端喵',
         protocol: '协议喵'
@@ -118,6 +119,7 @@ export const messages = {
   en: {
     app: {
       tabs: {
+        home: 'Home',
         canvas: 'Canvas',
         terminal: 'Terminal',
         protocol: 'Protocols'

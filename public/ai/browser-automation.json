@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "app": "Meow Serial",
+  "purpose": "Stable browser automation guide for AI agents controlling the web UI.",
+  "general_rules": [
+    "Prefer data-ai selectors over visible text.",
+    "Wait for [data-ai=\"protocol-view\"] before editing protocol profiles.",
+    "When importing a protocol JSON file, use the hidden file input at [data-ai=\"protocol-json-file-input\"] if the automation runtime supports file uploads.",
+    "After importing or manually entering a profile, use [data-ai=\"test-protocol\"] with representative sample input before saving.",
+    "Use [data-ai=\"save-and-apply-protocol\"] when a port is selected and the user wants the profile applied immediately."
+  ],
+  "navigation": {
+    "home_path": ".",
+    "serial_path": "serial",
+    "protocols_tab": "[data-ai=\"tab-protocol\"]",
+    "terminal_tab": "[data-ai=\"tab-terminal\"]",
+    "canvas_tab": "[data-ai=\"tab-canvas\"]"
+  },
+  "home_selectors": {
+    "view": "[data-ai=\"home-view\"]",
+    "enter_serial": "[data-ai=\"home-enter-serial\"]",
+    "open_protocol": "[data-ai=\"home-open-protocol\"]",
+    "open_terminal": "[data-ai=\"home-open-terminal\"]",
+    "open_canvas": "[data-ai=\"home-open-canvas\"]"
+  },
+  "protocol_form_selectors": {
+    "view": "[data-ai=\"protocol-view\"]",
+    "current_port_list": "[data-ai=\"protocol-port-list\"]",
+    "library": "[data-ai=\"protocol-library\"]",
+    "editor": "[data-ai=\"protocol-editor\"]",
+    "name": "[data-ai=\"protocol-name\"]",
+    "kind": "[data-ai=\"protocol-kind\"]",
+    "baud_rate": "[data-ai=\"protocol-baud-rate\"]",
+    "hold_window_ms": "[data-ai=\"protocol-hold-window-ms\"]",
+    "description": "[data-ai=\"protocol-description\"]",
+    "held_channels": "[data-ai=\"protocol-held-channels\"]",
+    "line_separator_pattern": "[data-ai=\"line-separator-pattern\"]",
+    "line_channel_names": "[data-ai=\"line-channel-names\"]",
+    "json_field_paths": "[data-ai=\"json-field-paths\"]",
+    "tlv_magic_word": "[data-ai=\"tlv-magic-word\"]",
+    "tlv_header_size": "[data-ai=\"tlv-header-size\"]",
+    "tlv_packet_length_offset": "[data-ai=\"tlv-packet-length-offset\"]",
+    "tlv_packet_length_type": "[data-ai=\"tlv-packet-length-type\"]",
+    "tlv_packet_length_endian": "[data-ai=\"tlv-packet-length-endian\"]",
+    "tlv_count_offset": "[data-ai=\"tlv-count-offset\"]",
+    "tlv_count_type": "[data-ai=\"tlv-count-type\"]",
+    "tlv_count_endian": "[data-ai=\"tlv-count-endian\"]",
+    "tlv_header_size_per_record": "[data-ai=\"tlv-record-header-size\"]",
+    "tlv_type_offset": "[data-ai=\"tlv-type-offset\"]",
+    "tlv_length_offset": "[data-ai=\"tlv-length-offset\"]",
+    "tlv_header_endian": "[data-ai=\"tlv-header-endian\"]",
+    "tlv_type_type": "[data-ai=\"tlv-type-type\"]",
+    "tlv_length_type": "[data-ai=\"tlv-length-type\"]",
+    "tlv_length_includes_header": "[data-ai=\"tlv-length-includes-header\"]",
+    "add_tlv_mapping": "[data-ai=\"add-tlv-mapping\"]",
+    "test_input": "[data-ai=\"protocol-test-input\"]",
+    "test_output": "[data-ai=\"protocol-test-output\"]"
+  },
+  "actions": {
+    "new_line_protocol": "[data-ai=\"new-line-protocol\"]",
+    "new_tlv_protocol": "[data-ai=\"new-tlv-protocol\"]",
+    "save": "[data-ai=\"save-protocol\"]",
+    "save_and_apply": "[data-ai=\"save-and-apply-protocol\"]",
+    "test": "[data-ai=\"test-protocol\"]",
+    "export_json": "[data-ai=\"export-protocol-json\"]",
+    "import_json": "[data-ai=\"import-protocol-json\"]",
+    "clear_draft": "[data-ai=\"clear-protocol-draft\"]"
+  }
+}

@@ -1,87 +1,56 @@
-# 喵喵的串口工具
+# Meow Serial
 
-[English](README.md) | [简体中文](readme_zh.md)
-
-> 一款更偏“拿来就用”的串口 / WebSocket 调试工作区，适合快速连设备、看数据、配协议、搭小面板。
+> 面向真实调试现场的浏览器串口 / WebSocket 工作台。连接设备、查看收发、生成协议、映射通道、搭建仪表盘，都在一个页面里完成。
 
 ![Version](https://img.shields.io/badge/version-2.0.0-ffb3c7)
 ![Vue](https://img.shields.io/badge/Vue-3.4-42b883)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff)
 ![License](https://img.shields.io/badge/license-MIT-8bd3dd)
 
-## 这是干什么的
+## 项目定位
 
-喵喵的串口工具是一个基于浏览器的串口 / WebSocket 调试工具，主要分成三个使用区域：
+Meow Serial 是一个基于浏览器的串口调试工具，也支持 WebSocket 数据源。它不是一个只展示界面的 demo，而是面向日常硬件调试、协议验证和小型实时看板搭建的工作区。
 
-- `画布`：拖拽控件搭实时面板
-- `终端`：查看收发数据、发送命令
-- `协议`：把原始数据解析成有名字的通道
+核心目标：
 
-这个项目更偏“使用型工具”而不是“展示型项目”。核心目标是让你尽快连上设备、确认数据、做出看板，并把整套配置保存下来。
+- 快速连接串口或 WebSocket 设备
+- 在终端里确认 RX / TX 数据
+- 用协议 JSON 把原始数据解析成具名通道
+- 把通道绑定到波形、数值、仪表盘等控件
+- 导出完整工作区，换电脑或分享给别人继续用
+- 让 AI 能读懂网站、生成协议、甚至自动操作浏览器
 
-## 使用前准备
+## 主要功能
 
-- Node.js 18+
-- 如果要用 Web Serial，建议使用 Chromium 内核浏览器
-- 如果设备走网络，也可以使用 WebSocket 方式接入
+### 多数据源接入
 
-## 安装与启动
+- Web Serial 串口连接
+- WebSocket 设备流
+- 多端口管理
+- 波特率、数据位、停止位、校验位配置
+- 高波特率下自动降低终端刷屏压力，但解析和图表继续运行
 
-### 安装依赖
+### 终端调试
 
-```bash
-pnpm install
-```
+- RX / TX 日志查看
+- UTF-8 与 HEX 发送
+- `CR` / `LF` 附加选项
+- 文件逐行发送
+- 收发统计与速率显示
 
-### 启动项目
+### 协议解析
 
-```bash
-pnpm dev
-```
+- 默认 Raw 原始模式
+- 文本数值行协议：CSV、空格、制表符、分号等分隔格式
+- JSON Lines 协议：每行一个 JSON 对象
+- 通用 TLV 二进制协议：magic word、包长、TLV 类型、payload 偏移映射
+- 协议 JSON 导入 / 导出
+- 协议测试输入框
+- 解析字段自动变成全局通道
 
-启动后打开终端里显示的本地 Vite 地址即可。
+### 画布看板
 
-## 如何使用
-
-### 1. 添加并配置端口
-
-在左侧边栏里可以：
-
-- 添加串口或 WebSocket 端口
-- 设置波特率和传输参数
-- 选择设备
-- 连接或断开
-
-如果只是先确认设备有没有在说话，建议先连上再看终端，不要一开始就急着配图表。
-
-### 2. 在协议页选择解析方式
-
-如果你的数据不是单纯文本，而是结构化字段，去 `协议` 页处理。
-
-这里可以：
-
-- 保持 `raw`，用于最直接的原始调试
-- 选择内置解析器
-- 新建或编辑协议配置
-- 把解析结果映射成具名通道
-
-一旦解析器生效，通道就能被波形图、数值卡片、仪表盘等控件直接消费。
-
-### 3. 在终端页确认收发数据
-
-`终端` 页适合做第一轮确认：
-
-- 看 RX / TX 日志
-- 切换显示格式
-- 发送 UTF-8 或 HEX 命令
-- 使用 `CR` / `LF`
-- 需要时导出日志
-
-建议先在这里确认“设备真的在发”“我真的能发回去”，再去搭画布。
-
-### 4. 在画布页搭控件面板
-
-点击顶部 `控件` 按钮，把控件加到画布里。当前适合常用调试场景的控件包括：
+当前支持的控件包括：
 
 - 波形图
 - 迷你波形图
@@ -97,57 +66,239 @@ pnpm dev
 
 控件支持拖动、缩放、复制、图层调整和右侧设置面板配置。
 
-### 5. 配置控制类控件
+## AI 友好能力
 
-控制类控件不是摆设，尤其是按钮控件，现在已经补得更完整了。
+Meow Serial 的协议系统专门为 AI 协作做了入口。以后你可以把网站地址、设备手册、协议表或样例帧发给任意 AI，让 AI 生成可以直接导入的协议 JSON。
 
-按钮控件支持：
+![AI 协议工作流](public/images/ai-protocol-workflow.png)
 
-- 更合理的默认大小，直接点更顺手
-- 设置按钮文字和发送命令
-- 选择按钮风格
-- 选择 UTF-8 / HEX 发送格式
-- 配置 `CR` / `LF`
+推荐工作流：
 
-新增按钮控件时，会自动打开右侧设置面板，方便立即配置，不用再多点一次。
+1. 把设备协议说明、字段表、样例数据发给 AI。
+2. 让 AI 按 Meow Serial 协议 JSON schema 生成一个 JSON。
+3. 打开 Meow Serial 的 `协议` 页面。
+4. 点击 `导入 JSON`。
+5. 在协议测试框里粘贴样例数据，点击 `测试解析`。
+6. 确认通道名和值正确后，保存并应用到端口。
 
-### 6. 保存全局工作区
+AI 应优先生成协议 JSON，而不是直接改源码。只有协议无法用 `line-values`、`json-lines` 或 `tlv` 表达时，才需要新增自定义 parser 代码。
 
-顶部栏支持导出 / 导入全局工作区 JSON。当前会一起保存：
+## 页面结构
 
-- 控件与布局
-- 串口与解析器选择
-- 主题设置
-- 画布背景模式
-- 界面语言
+部署后建议使用这两个主要页面：
 
-如果你经常在不同设备上调同一套协议，或者想给同事复用一份配置，这一项会很实用。
+- `/`：独立主页，展示产品介绍、AI 协议工作流和公开 AI/API 入口
+- `/serial`：串口调试工作台，包含画布、终端和协议三个子页
 
-## 推荐使用流程
+串口工作台支持带参数直达：
 
-大多数情况下，建议按这个顺序来：
+```text
+/serial
+/serial?tab=terminal
+/serial?tab=protocol
+```
 
-1. 先连接端口
-2. 在 `终端` 页确认数据有没有正常进来
-3. 在 `协议` 页选择或配置解析器
-4. 确认通道值是否正常更新
-5. 回到 `画布` 页搭控件
-6. 最后导出工作区 JSON 备份
+## 公开给 AI 的网站接口
 
-## 多语言支持
+如果这个项目部署成网站，AI 可以通过下面这些公开路径了解如何使用 Meow Serial：
 
-项目已内置轻量 i18n：
+```text
+/llms.txt
+/.well-known/mserial-ai.json
+/ai/protocol-profile.schema.json
+/ai/browser-automation.json
+/api/mserial.json
+```
 
-- 支持 `zh-CN` 和 `en`
-- 可以在右上角切换语言
-- 语言会保存在本地
-- 语言也会写入全局工作区 JSON
+这些文件的用途：
 
-当前优先覆盖了应用外壳、控件面板和关键配置流程，后续还可以继续补更多页面。
+- `/llms.txt`：给 AI 阅读的项目简介和推荐流程
+- `/.well-known/mserial-ai.json`：机器可读的能力清单、schema 地址和自动化入口
+- `/ai/protocol-profile.schema.json`：可导入协议 JSON 的 JSON Schema
+- `/ai/browser-automation.json`：浏览器自动化选择器说明
+- `/api/mserial.json`：主页运行时读取的项目能力、入口和协议类型元数据
 
-## 开发方式
+给 AI 的一句话任务模板：
 
-开发部分保持尽量简单，适合边改边看。
+```text
+请根据我提供的设备协议资料，生成一个可导入 Meow Serial 的协议 JSON。
+只返回一个合法 JSON 对象，不要 Markdown，不要注释。
+协议类型只能使用 line-values、json-lines 或 tlv。
+如果是 TLV，请使用十进制偏移和类型号，并给出稳定的通道 label。
+```
+
+## 协议 JSON 示例
+
+### 文本数值行
+
+适合这样的输入：
+
+```text
+23.5, 48.1, 101.3
+```
+
+协议 JSON：
+
+```json
+{
+  "name": "环境传感器 CSV",
+  "description": "每行输出温度、湿度、气压三个数值",
+  "kind": "line-values",
+  "defaultBaudRate": 115200,
+  "heldChannels": [],
+  "heldWindowMs": 0,
+  "line": {
+    "separatorPattern": "[,\\t; ]+",
+    "channelNames": ["temperature", "humidity", "pressure"]
+  }
+}
+```
+
+### JSON Lines
+
+适合这样的输入：
+
+```json
+{"bpm":16.8,"confidence":2.74,"data":{"temperature":36.5}}
+```
+
+协议 JSON：
+
+```json
+{
+  "name": "JSON 呼吸传感器",
+  "description": "每行一个 JSON 对象，提取呼吸率、置信度和温度",
+  "kind": "json-lines",
+  "defaultBaudRate": 115200,
+  "heldChannels": ["bpm"],
+  "heldWindowMs": 3000,
+  "json": {
+    "fieldPaths": ["bpm", "confidence", "data.temperature"]
+  }
+}
+```
+
+### TLV 二进制协议
+
+适合带包头、包长、TLV 类型和 payload 的二进制协议：
+
+```json
+{
+  "name": "示例 TLV 设备",
+  "description": "二进制 TLV 数据包，提取 BPM 和 confidence",
+  "kind": "tlv",
+  "defaultBaudRate": 921600,
+  "heldChannels": ["BPM", "confidence"],
+  "heldWindowMs": 3000,
+  "tlv": {
+    "magicWordHex": "02 01 04 03 06 05 08 07",
+    "headerSize": 40,
+    "packetLengthOffset": 12,
+    "packetLengthType": "u32",
+    "packetLengthEndian": "little",
+    "tlvCountOffset": 32,
+    "tlvCountType": "u32",
+    "tlvCountEndian": "little",
+    "tlvHeaderSize": 8,
+    "tlvTypeOffset": 0,
+    "tlvTypeType": "u32",
+    "tlvLengthOffset": 4,
+    "tlvLengthType": "u32",
+    "tlvHeaderEndian": "little",
+    "tlvLengthIncludesHeader": false,
+    "mappings": [
+      {
+        "label": "BPM",
+        "tlvType": 1001,
+        "valueOffset": 0,
+        "valueType": "f32",
+        "endian": "little",
+        "scale": 1,
+        "unit": "bpm"
+      },
+      {
+        "label": "confidence",
+        "tlvType": 1001,
+        "valueOffset": 4,
+        "valueType": "f32",
+        "endian": "little",
+        "scale": 1,
+        "unit": ""
+      }
+    ]
+  }
+}
+```
+
+## 浏览器自动化友好
+
+协议页面已经为 AI 浏览器操作提供稳定选择器。自动化脚本或浏览器代理应该优先使用 `data-ai`，不要依赖中文按钮文本。
+
+常用选择器：
+
+```text
+[data-ai="tab-protocol"]              打开协议页
+[data-ai="protocol-view"]             协议页容器
+[data-ai="new-line-protocol"]         新建文本协议
+[data-ai="new-tlv-protocol"]          新建 TLV 协议
+[data-ai="protocol-name"]             协议名称
+[data-ai="protocol-kind"]             协议类型
+[data-ai="protocol-baud-rate"]        推荐波特率
+[data-ai="protocol-description"]      协议描述
+[data-ai="protocol-test-input"]       测试输入
+[data-ai="protocol-test-output"]      解析结果
+[data-ai="test-protocol"]             测试解析
+[data-ai="save-protocol"]             保存协议
+[data-ai="save-and-apply-protocol"]   保存并应用到当前端口
+[data-ai="import-protocol-json"]      导入协议 JSON
+[data-ai="export-protocol-json"]      导出协议 JSON
+```
+
+完整选择器表见：
+
+- [docs/ai-public-api.md](docs/ai-public-api.md)
+- [public/ai/browser-automation.json](public/ai/browser-automation.json)
+
+## 使用流程
+
+### 1. 启动项目
+
+```bash
+pnpm install
+pnpm dev
+```
+
+然后打开终端里显示的 Vite 本地地址。默认 `/` 是独立主页，串口工具在 `/serial`。
+
+### 2. 添加端口
+
+在左侧栏添加串口或 WebSocket 端口，设置波特率和传输参数，选择设备并连接。
+
+### 3. 先看终端
+
+进入 `终端` 页，确认设备确实有数据进入，也确认发送命令能被设备接收。
+
+### 4. 配协议
+
+进入 `协议` 页，可以手动新建协议，也可以导入 AI 生成的协议 JSON。测试通过后保存并应用到端口。
+
+### 5. 搭看板
+
+回到 `画布`，添加波形图、数值卡片、仪表盘等控件，把它们绑定到解析出来的通道。
+
+### 6. 导出工作区
+
+顶部栏可以导出完整工作区 JSON。它会保存端口、协议、控件、布局、主题和语言设置。
+
+## 开发说明
+
+### 环境要求
+
+- Node.js 18+
+- pnpm
+- 使用 Web Serial 时建议使用 Chromium 内核浏览器
+
+本仓库统一使用 pnpm 作为包管理器。请不要提交 `package-lock.json` 或 `yarn.lock`。
 
 ### 常用命令
 
@@ -168,14 +319,41 @@ src/
 ├── utils/        # 串口、存储、导出等工具
 ├── i18n/         # 多语言消息与辅助函数
 └── styles/       # 全局样式
+
+public/
+├── images/
+│   └── ai-protocol-workflow.png
+├── llms.txt
+├── .well-known/mserial-ai.json
+├── api/
+│   └── mserial.json
+└── ai/
+    ├── protocol-profile.schema.json
+    └── browser-automation.json
+
+docs/
+├── ai-protocol-guide.md
+└── ai-public-api.md
 ```
 
-如果要扩展项目，常见入口大概是：
+## 给后续 AI 的开发入口
 
-- `src/components/`：改页面和工具栏
-- `src/widgets/`：新增或修改控件
-- `src/parsers/`：补协议支持
-- `src/i18n/`：补翻译内容
+如果要继续扩展这个项目，优先阅读：
+
+- [AGENTS.md](AGENTS.md)
+- [docs/ai-protocol-guide.md](docs/ai-protocol-guide.md)
+- [docs/ai-public-api.md](docs/ai-public-api.md)
+
+关键代码入口：
+
+- `src/main.js`：注册 parser 并启动应用
+- `src/components/HomeView.vue`：首页和 AI 工作流入口
+- `src/components/ProtocolView.vue`：协议页面
+- `src/utils/protocolProfiles.js`：协议 JSON schema 的归一化和存储
+- `src/parsers/profileParserFactory.js`：把协议 JSON 转成可执行 parser
+- `src/utils/parserRegistry.js`：parser 注册表
+- `src/stores/ports.js`：端口、连接和 parser 调用
+- `src/stores/serial.js`：全局通道、历史数据和工作区持久化
 
 ## 许可证
 
@@ -183,4 +361,4 @@ MIT
 
 ---
 
-由猫爪、串口日志和认真调试的耐心共同驱动。
+Meow Serial 希望把串口调试做得更直接一点：先看见数据，再理解协议，最后把现场变成可以复用的工作区。

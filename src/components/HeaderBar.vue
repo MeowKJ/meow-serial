@@ -31,7 +31,7 @@ defineProps({
   isRecording: Boolean
 })
 
-const emit = defineEmits(['set-tab', 'clear-all', 'show-widget-panel'])
+const emit = defineEmits(['set-tab', 'clear-all', 'show-widget-panel', 'open-home'])
 
 const exportLayout = () => {
   store.saveWorkspaceState()
@@ -92,9 +92,15 @@ const toggleCanvasBackdropPattern = () => {
   <header class="relative z-[70] bg-cat-card/92 backdrop-blur-xl border-b border-cat-border/45 px-2 py-1 shrink-0 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
     <div class="flex items-center gap-2.5">
       <div class="flex items-center gap-2 min-w-0">
-        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-cat-primary to-cat-secondary flex items-center justify-center text-sm shadow-sm shrink-0">
+        <button
+          type="button"
+          class="w-7 h-7 rounded-lg bg-gradient-to-br from-cat-primary to-cat-secondary flex items-center justify-center text-sm shadow-sm shrink-0"
+          data-ai="serial-open-home"
+          title="回到首页"
+          @click="$emit('open-home')"
+        >
           <FluentEmoji name="cat" :size="18" alt="cat" />
-        </div>
+        </button>
         <div class="flex items-center gap-1.5 min-w-0">
           <span class="font-semibold text-sm text-cat-text truncate">{{ i18n.t('header.appTitle') }}</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-cat-surface rounded-full text-cat-muted shrink-0">{{ i18n.t('header.version') }}</span>
@@ -141,6 +147,7 @@ const toggleCanvasBackdropPattern = () => {
             v-for="tab in tabs"
             :key="tab.id"
             @click="$emit('set-tab', tab.id)"
+            :data-ai="`tab-${tab.id}`"
             :class="[
               'header-tab',
               activeTab === tab.id

@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "name": "Meow Serial",
+  "short_name": "mserial",
+  "description": "Browser-based serial and WebSocket debugging workspace with importable protocol JSON profiles.",
+  "homepage": ".",
+  "serial_app": "serial",
+  "public_api": "api/mserial.json",
+  "llms_txt": "llms.txt",
+  "capabilities": [
+    "connect serial ports with Web Serial",
+    "connect WebSocket device streams",
+    "inspect RX and TX traffic",
+    "generate, import, export, test, save, and apply protocol JSON profiles",
+    "map parsed values into named channels for dashboard widgets"
+  ],
+  "protocol_profile": {
+    "schema_url": "ai/protocol-profile.schema.json",
+    "supported_kinds": ["line-values", "json-lines", "tlv"],
+    "direct_import_format": "single JSON object without Markdown",
+    "preferred_ai_task": "Generate an importable protocol JSON profile from a device manual, field table, sample frames, or protocol notes."
+  },
+  "browser_automation": {
+    "guide_url": "ai/browser-automation.json",
+    "stable_selectors": {
+      "protocol_tab": "[data-ai=\"tab-protocol\"]",
+      "home_view": "[data-ai=\"home-view\"]",
+      "serial_app": "[data-ai=\"serial-app\"]",
+      "enter_serial": "[data-ai=\"home-enter-serial\"]",
+      "protocol_view": "[data-ai=\"protocol-view\"]",
+      "new_line_protocol": "[data-ai=\"new-line-protocol\"]",
+      "new_tlv_protocol": "[data-ai=\"new-tlv-protocol\"]",
+      "protocol_name": "[data-ai=\"protocol-name\"]",
+      "protocol_kind": "[data-ai=\"protocol-kind\"]",
+      "protocol_baud_rate": "[data-ai=\"protocol-baud-rate\"]",
+      "protocol_description": "[data-ai=\"protocol-description\"]",
+      "protocol_test_input": "[data-ai=\"protocol-test-input\"]",
+      "protocol_test_output": "[data-ai=\"protocol-test-output\"]",
+      "test_protocol": "[data-ai=\"test-protocol\"]",
+      "save_protocol": "[data-ai=\"save-protocol\"]",
+      "save_and_apply_protocol": "[data-ai=\"save-and-apply-protocol\"]",
+      "import_protocol_json": "[data-ai=\"import-protocol-json\"]",
+      "export_protocol_json": "[data-ai=\"export-protocol-json\"]"
+    }
+  },
+  "ai_prompt_template": "Generate one valid importable Meow Serial protocol JSON object. Use kind line-values, json-lines, or tlv. Return only JSON with no Markdown. Use decimal numbers, stable channel labels, and the schema at ai/protocol-profile.schema.json."
+}

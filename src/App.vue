@@ -1,11 +1,12 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useSerialStore } from './stores/serial'
 import { useI18nStore } from './stores/i18n'
 
 // Components
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
+import HomeView from './components/HomeView.vue'
 import CanvasView from './components/CanvasView.vue'
 import TerminalView from './components/TerminalView.vue'
 import ProtocolView from './components/ProtocolView.vue'
@@ -15,9 +16,32 @@ import ContextMenu from './components/ContextMenu.vue'
 
 const store = useSerialStore()
 const i18n = useI18nStore()
+const basePath = import.meta.env.BASE_URL || '/'
+
+const withBase = (path) => {
+  const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`
+  const normalizedPath = String(path || '').replace(/^\/+/, '')
+  return `${normalizedBase}${normalizedPath}`
+}
 
 // 界面状态
-const activeTab = ref('canvas')
+const getRouteFromLocation = () => {
+  const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`
+  let path = window.location.pathname
+  if (normalizedBase !== '/' && path.startsWith(normalizedBase)) {
+    path = `/${path.slice(normalizedBase.length)}`
+  }
+  path = path.replace(/\/+$/, '') || '/'
+  return path === '/serial' ? 'serial' : 'home'
+}
+
+const getInitialSerialTab = () => {
+  const tab = new URLSearchParams(window.location.search).get('tab')
+  return ['canvas', 'terminal', 'protocol'].includes(tab) ? tab : 'canvas'
+}
+
+const route = ref(getRouteFromLocation())
+const activeTab = ref(getInitialSerialTab())
 const tabs = computed(() => [
   { id: 'canvas', name: i18n.t('app.tabs.canvas'), icon: '🎨', emojiName: 'artistPalette' },
   { id: 'terminal', name: i18n.t('app.tabs.terminal'), icon: '🖥️', emojiName: 'desktopComputer' },
@@ -52,6 +76,33 @@ watch(selectedWidgetId, (widgetId) => {
 // 方法
 const clearAll = () => {
   store.clearAll()
+}
+
+const openSerial = (tab = 'canvas') => {
+  const safeTab = ['canvas', 'terminal', 'protocol'].includes(tab) ? tab : 'canvas'
+  activeTab.value = safeTab
+  route.value = 'serial'
+  const url = safeTab === 'canvas' ? withBase('serial') : `${withBase('serial')}?tab=${safeTab}`
+  window.history.pushState({ route: 'serial', tab: safeTab }, '', url)
+}
+
+const setSerialTab = (tab) => {
+  if (!['canvas', 'terminal', 'protocol'].includes(tab)) return
+  activeTab.value = tab
+  const url = tab === 'canvas' ? withBase('serial') : `${withBase('serial')}?tab=${tab}`
+  window.history.replaceState({ route: 'serial', tab }, '', url)
+}
+
+const openHome = () => {
+  route.value = 'home'
+  window.history.pushState({ route: 'home' }, '', withBase(''))
+}
+
+const syncRouteFromBrowser = () => {
+  route.value = getRouteFromLocation()
+  if (route.value === 'serial') {
+    activeTab.value = getInitialSerialTab()
+  }
 }
 
 const closeContextMenu = () => {
@@ -172,22 +223,36 @@ const handleWidgetAdded = (widget) => {
 // 全局点击关闭菜单
 onMounted(() => {
   document.addEventListener('click', closeContextMenu)
+  window.addEventListener('popstate', syncRouteFromBrowser)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeContextMenu)
+  window.removeEventListener('popstate', syncRouteFromBrowser)
 })
 </script>
 
 <template>
-  <div class="h-screen flex flex-col overflow-hidden bg-cat-bg">
+  <HomeView
+    v-if="route === 'home'"
+    @open-protocol="openSerial('protocol')"
+    @open-canvas="openSerial('canvas')"
+    @open-terminal="openSerial('terminal')"
+  />
+
+  <div v-else class="h-screen flex flex-col overflow-hidden bg-cat-bg" data-ai="serial-app">
     <!-- 顶部栏 -->
     <HeaderBar 
       :tabs="tabs"
       :active-tab="activeTab"
       :is-paused="isPaused"
       :is-recording="isRecording"
-      @set-tab="activeTab = $event"
+      @set-tab="setSerialTab"
       @toggle-pause="isPaused = !isPaused"
       @clear-all="clearAll"
       @toggle-recording="isRecording = !isRecording"
       @show-widget-panel="showWidgetPanel = true"
+      @open-home="openHome"
     />
 
     <!-- 主体区域 -->
