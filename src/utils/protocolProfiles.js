@@ -1,4 +1,4 @@
-import { loadFromStorage, saveToStorage } from './storage'
+import { loadFromStorage, saveToStorage } from './storage.js'
 
 const USER_PROTOCOLS_KEY = 'protocol_profiles'
 const USER_PARSER_PREFIX = 'profile:'

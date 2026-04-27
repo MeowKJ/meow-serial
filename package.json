@@ -9,6 +9,8 @@
     "dev:serial": "vite --host 127.0.0.1",
     "build:serial": "node scripts/build-serial.mjs",
     "build": "pnpm build:serial && next build",
+    "verify": "node scripts/verify.mjs",
+    "test": "pnpm verify",
     "preview": "next start",
     "preview:serial": "vite preview"
   },

@@ -1,0 +1,12 @@
+{
+  "id": "example-json-lines-vitals",
+  "name": "示例生命体征 JSON Lines",
+  "description": "每行一个 JSON 对象，提取心率、血氧和体温。",
+  "kind": "json-lines",
+  "defaultBaudRate": 115200,
+  "heldChannels": ["hr"],
+  "heldWindowMs": 3000,
+  "json": {
+    "fieldPaths": ["hr", "spo2", "data.temperature"]
+  }
+}

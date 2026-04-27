@@ -98,6 +98,26 @@ AI 应优先生成协议 JSON，而不是直接改源码。只有协议无法用
 /serial?tab=protocol
 ```
 
+## 5 分钟体验闭环
+
+这个仓库带有可复跑的示例协议、样例数据和工作区。没有真实串口硬件时，也可以先用这些文件确认完整流程。
+
+1. 打开 `/api/mserial`，确认 AI 操作索引里有 `examples` 和 `validationHints`。
+2. 打开 `/serial?tab=protocol`。
+3. 导入 `public/examples/protocols/json-lines.json`。
+4. 把 `public/examples/samples/json-lines.txt` 粘贴到协议测试输入框。
+5. 点击 `测试解析`，应看到 `hr`、`spo2`、`data.temperature`。
+6. 导入 `public/examples/workspaces/vitals-dashboard.json`，查看示例看板布局。
+
+本地可直接运行：
+
+```bash
+pnpm verify
+pnpm build
+```
+
+更多演示步骤见 [`docs/demo-script.md`](docs/demo-script.md)。
+
 ## 公开给 AI 的网站接口
 
 如果这个项目部署成网站，AI 可以通过下面这些公开路径了解如何使用 Meow Serial：
@@ -116,7 +136,19 @@ AI 应优先生成协议 JSON，而不是直接改源码。只有协议无法用
 - `/.well-known/mserial-ai.json`：机器可读的能力清单、schema 地址和自动化入口
 - `/ai/protocol-profile.schema.json`：可导入协议 JSON 的 JSON Schema
 - `/ai/browser-automation.json`：浏览器自动化选择器说明
-- `/api/mserial`：Next.js API Route，返回项目能力、入口和协议类型元数据
+- `/api/mserial`：Next.js API Route，返回版本、示例、验证提示、命令入口和协议类型元数据
+
+公开示例资产：
+
+```text
+/examples/protocols/line-values.json
+/examples/protocols/json-lines.json
+/examples/protocols/tlv.json
+/examples/samples/line-values.txt
+/examples/samples/json-lines.txt
+/examples/samples/tlv.hex
+/examples/workspaces/vitals-dashboard.json
+```
 
 给 AI 的一句话任务模板：
 

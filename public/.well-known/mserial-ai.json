@@ -3,10 +3,30 @@
   "name": "Meow Serial",
   "short_name": "mserial",
   "description": "Browser-based serial and WebSocket debugging workspace with importable protocol JSON profiles.",
-  "homepage": ".",
-  "serial_app": "serial",
-  "public_api": "api/mserial",
-  "llms_txt": "llms.txt",
+  "homepage": "/",
+  "serial_app": "/serial",
+  "public_api": "/api/mserial",
+  "llms_txt": "/llms.txt",
+  "examples": {
+    "protocols": {
+      "line_values": "/examples/protocols/line-values.json",
+      "json_lines": "/examples/protocols/json-lines.json",
+      "tlv": "/examples/protocols/tlv.json"
+    },
+    "samples": {
+      "line_values": "/examples/samples/line-values.txt",
+      "json_lines": "/examples/samples/json-lines.txt",
+      "tlv_hex": "/examples/samples/tlv.hex"
+    },
+    "workspaces": {
+      "vitals_dashboard": "/examples/workspaces/vitals-dashboard.json"
+    }
+  },
+  "validation": {
+    "local_command": "pnpm verify",
+    "demo_script": "/docs/demo-script.md",
+    "success_signal": "Protocol examples parse into finite named channel values, and /api/mserial exposes examples plus validation hints."
+  },
   "capabilities": [
     "connect serial ports with Web Serial",
     "connect WebSocket device streams",
@@ -15,18 +35,33 @@
     "map parsed values into named channels for dashboard widgets"
   ],
   "protocol_profile": {
-    "schema_url": "ai/protocol-profile.schema.json",
+    "schema_url": "/ai/protocol-profile.schema.json",
     "supported_kinds": ["line-values", "json-lines", "tlv"],
     "direct_import_format": "single JSON object without Markdown",
     "preferred_ai_task": "Generate an importable protocol JSON profile from a device manual, field table, sample frames, or protocol notes."
   },
   "browser_automation": {
-    "guide_url": "ai/browser-automation.json",
+    "guide_url": "/ai/browser-automation.json",
+    "first_read_order": [
+      "/llms.txt",
+      "/.well-known/mserial-ai.json",
+      "/api/mserial",
+      "/ai/protocol-profile.schema.json",
+      "/ai/browser-automation.json"
+    ],
+    "automation_priority": "Use home command selectors for navigation, then use protocol form selectors for editing and testing protocol profiles.",
     "stable_selectors": {
       "protocol_tab": "[data-ai=\"tab-protocol\"]",
       "home_view": "[data-ai=\"home-view\"]",
       "serial_app": "[data-ai=\"serial-app\"]",
       "enter_serial": "[data-ai=\"home-enter-serial\"]",
+      "home_api": "[data-ai=\"home-open-api\"]",
+      "home_command_panel": "[data-ai=\"home-ai-command-panel\"]",
+      "home_endpoint_panel": "[data-ai=\"home-ai-endpoints\"]",
+      "home_live_preview": "[data-ai=\"home-live-preview\"]",
+      "home_command_protocol": "[data-ai-command=\"protocol.import\"]",
+      "home_command_terminal": "[data-ai-command=\"terminal.inspect\"]",
+      "home_command_canvas": "[data-ai-command=\"canvas.compose\"]",
       "protocol_view": "[data-ai=\"protocol-view\"]",
       "new_line_protocol": "[data-ai=\"new-line-protocol\"]",
       "new_tlv_protocol": "[data-ai=\"new-tlv-protocol\"]",
@@ -43,5 +78,5 @@
       "export_protocol_json": "[data-ai=\"export-protocol-json\"]"
     }
   },
-  "ai_prompt_template": "Generate one valid importable Meow Serial protocol JSON object. Use kind line-values, json-lines, or tlv. Return only JSON with no Markdown. Use decimal numbers, stable channel labels, and the schema at ai/protocol-profile.schema.json."
+  "ai_prompt_template": "Generate one valid importable Meow Serial protocol JSON object. Use kind line-values, json-lines, or tlv. Return only JSON with no Markdown. Use decimal numbers, stable channel labels, and the schema at /ai/protocol-profile.schema.json."
 }

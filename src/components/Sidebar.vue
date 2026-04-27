@@ -83,6 +83,14 @@ const onSelectParser = (portId, parserId) => {
   store.syncAutoChannelsForPort(portId)
 }
 
+const isPortToggleDisabled = (portState) => {
+  if (portState.connecting) return true
+  if (portState.connected) return false
+  return portState.transportType === 'serial'
+    ? !portState.device
+    : !portState.websocketUrl
+}
+
 // 按端口分组通道
 const channelsByPort = computed(() => {
   const groups = new Map()
@@ -201,13 +209,13 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
               <!-- 快速连接/断开 -->
               <button
                 @click.stop="onTogglePort(portState.id)"
-                :disabled="portState.connecting || (portState.transportType === 'serial' ? (!portState.device && !portState.connected) : (!portState.websocketUrl && !portState.connected))"
+                :disabled="isPortToggleDisabled(portState)"
                 :class="[
                   'px-2.5 py-1 rounded-lg text-[11px] shrink-0 transition-colors',
                   portState.connected
                     ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                     : 'cat-btn text-white',
-                  (portState.connecting || (!portState.device && !portState.connected)) ? 'opacity-50' : ''
+                  isPortToggleDisabled(portState) ? 'opacity-50' : ''
                 ]"
               >
                 {{ portState.connecting ? '...' : (portState.connected ? '断开' : '连接') }}

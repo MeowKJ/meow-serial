@@ -1,0 +1,46 @@
+{
+  "id": "example-tlv-bio",
+  "name": "示例二进制 TLV 生命体征",
+  "description": "AA55 包头，8 字节包头，4 字节 TLV 头，提取 BPM 和 confidence。",
+  "kind": "tlv",
+  "defaultBaudRate": 921600,
+  "heldChannels": ["bpm"],
+  "heldWindowMs": 3000,
+  "tlv": {
+    "magicWordHex": "AA 55",
+    "headerSize": 8,
+    "packetLengthOffset": 2,
+    "packetLengthType": "u16",
+    "packetLengthEndian": "little",
+    "tlvCountOffset": 4,
+    "tlvCountType": "u16",
+    "tlvCountEndian": "little",
+    "tlvHeaderSize": 4,
+    "tlvTypeOffset": 0,
+    "tlvTypeType": "u16",
+    "tlvLengthOffset": 2,
+    "tlvLengthType": "u16",
+    "tlvHeaderEndian": "little",
+    "tlvLengthIncludesHeader": false,
+    "mappings": [
+      {
+        "label": "bpm",
+        "tlvType": 1,
+        "valueOffset": 0,
+        "valueType": "f32",
+        "endian": "little",
+        "scale": 1,
+        "unit": "bpm"
+      },
+      {
+        "label": "confidence",
+        "tlvType": 1,
+        "valueOffset": 4,
+        "valueType": "f32",
+        "endian": "little",
+        "scale": 1,
+        "unit": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+{"hr":74,"spo2":98.2,"data":{"temperature":36.7}}

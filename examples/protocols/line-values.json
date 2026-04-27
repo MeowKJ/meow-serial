@@ -1,0 +1,13 @@
+{
+  "id": "example-line-values-env",
+  "name": "示例环境传感器 CSV",
+  "description": "每行输出温度、湿度、气压三个数值，适合验证 line-values 协议。",
+  "kind": "line-values",
+  "defaultBaudRate": 115200,
+  "heldChannels": [],
+  "heldWindowMs": 0,
+  "line": {
+    "separatorPattern": "[,\\t; ]+",
+    "channelNames": ["temperature", "humidity", "pressure"]
+  }
+}

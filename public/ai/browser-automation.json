@@ -3,7 +3,9 @@
   "app": "Meow Serial",
   "purpose": "Stable browser automation guide for AI agents controlling the web UI.",
   "general_rules": [
+    "Start discovery with /llms.txt, then /.well-known/mserial-ai.json, then /api/mserial.",
     "Prefer data-ai selectors over visible text.",
+    "Prefer data-ai-command selectors for high-level home navigation.",
     "Wait for [data-ai=\"protocol-view\"] before editing protocol profiles.",
     "When importing a protocol JSON file, use the hidden file input at [data-ai=\"protocol-json-file-input\"] if the automation runtime supports file uploads.",
     "After importing or manually entering a profile, use [data-ai=\"test-protocol\"] with representative sample input before saving.",
@@ -12,16 +14,48 @@
   "navigation": {
     "home_path": ".",
     "serial_path": "/serial",
+    "api_path": "/api/mserial",
     "protocols_tab": "[data-ai=\"tab-protocol\"]",
     "terminal_tab": "[data-ai=\"tab-terminal\"]",
     "canvas_tab": "[data-ai=\"tab-canvas\"]"
   },
   "home_selectors": {
     "view": "[data-ai=\"home-view\"]",
+    "topbar": "[data-ai=\"home-topbar\"]",
+    "brand": "[data-ai=\"home-brand\"]",
     "enter_serial": "[data-ai=\"home-enter-serial\"]",
+    "open_api": "[data-ai=\"home-open-api\"]",
     "open_protocol": "[data-ai=\"home-open-protocol\"]",
-    "open_terminal": "[data-ai=\"home-open-terminal\"]",
-    "open_canvas": "[data-ai=\"home-open-canvas\"]"
+    "start_protocol": "[data-ai=\"home-start-protocol\"]",
+    "start_canvas": "[data-ai=\"home-start-canvas\"]",
+    "live_preview": "[data-ai=\"home-live-preview\"]",
+    "event_stream": "[data-ai=\"home-event-stream\"]",
+    "command_panel": "[data-ai=\"home-ai-command-panel\"]",
+    "endpoint_panel": "[data-ai=\"home-ai-endpoints\"]",
+    "workflow_image": "[data-ai=\"home-workflow-image\"]"
+  },
+  "home_layout_contract": {
+    "human_facing_area": "[data-ai=\"home-live-preview\"]",
+    "ai_facing_area": "[data-ai=\"home-ai-command-panel\"]",
+    "machine_readable_area": "[data-ai=\"home-ai-endpoints\"]",
+    "responsive_behavior": [
+      "Desktop places the live visualization preview next to the headline.",
+      "Tablet and mobile stack sections in DOM order.",
+      "Selectors and command IDs remain stable across viewport sizes."
+    ],
+    "commands": {
+      "protocol.import": "[data-ai-command=\"protocol.import\"]",
+      "terminal.inspect": "[data-ai-command=\"terminal.inspect\"]",
+      "canvas.compose": "[data-ai-command=\"canvas.compose\"]",
+      "api.describe": "[data-ai-command=\"api.describe\"]"
+    },
+    "endpoints": {
+      "llms": "[data-ai-endpoint=\"/llms.txt\"]",
+      "manifest": "[data-ai-endpoint=\"/.well-known/mserial-ai.json\"]",
+      "api": "[data-ai-endpoint=\"/api/mserial\"]",
+      "schema": "[data-ai-endpoint=\"/ai/protocol-profile.schema.json\"]",
+      "browser_automation": "[data-ai-endpoint=\"/ai/browser-automation.json\"]"
+    }
   },
   "protocol_form_selectors": {
     "view": "[data-ai=\"protocol-view\"]",

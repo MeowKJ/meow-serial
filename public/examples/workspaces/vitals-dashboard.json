@@ -1,0 +1,90 @@
+{
+  "kind": "meow-serial-workspace",
+  "version": 1,
+  "exportedAt": 0,
+  "workspace": {
+    "widgets": [
+      {
+        "id": "widget-waveform-vitals",
+        "type": "waveform",
+        "title": "生命体征实时波形",
+        "x": 24,
+        "y": 24,
+        "width": 520,
+        "height": 260,
+        "channels": [0, 1, 2]
+      },
+      {
+        "id": "widget-hr-value",
+        "type": "value",
+        "title": "心率",
+        "x": 568,
+        "y": 24,
+        "width": 220,
+        "height": 150,
+        "channel": 0
+      },
+      {
+        "id": "widget-spo2-gauge",
+        "type": "gauge",
+        "title": "血氧",
+        "x": 812,
+        "y": 24,
+        "width": 220,
+        "height": 220,
+        "channel": 1,
+        "min": 80,
+        "max": 100
+      },
+      {
+        "id": "widget-temp-sparkline",
+        "type": "sparkline",
+        "title": "体温趋势",
+        "x": 568,
+        "y": 198,
+        "width": 464,
+        "height": 150,
+        "channel": 2
+      }
+    ],
+    "channels": [
+      {
+        "id": "channel-hr",
+        "name": "hr",
+        "color": "#5EEAD4",
+        "enabled": true,
+        "value": 74,
+        "portId": "",
+        "autoCreated": true,
+        "sourceKey": "hr"
+      },
+      {
+        "id": "channel-spo2",
+        "name": "spo2",
+        "color": "#60A5FA",
+        "enabled": true,
+        "value": 98.2,
+        "portId": "",
+        "autoCreated": true,
+        "sourceKey": "spo2"
+      },
+      {
+        "id": "channel-temp",
+        "name": "data.temperature",
+        "color": "#F6C177",
+        "enabled": true,
+        "value": 36.7,
+        "portId": "",
+        "autoCreated": true,
+        "sourceKey": "data.temperature"
+      }
+    ],
+    "protocol": {},
+    "protocolProfiles": [],
+    "theme": {},
+    "ui": {},
+    "canvas": {},
+    "ports": [],
+    "savedAt": 0
+  }
+}

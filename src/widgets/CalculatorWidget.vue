@@ -16,32 +16,178 @@ const presets = [
   { label: '比率', expr: 'ch0 / ch1 * 100' }
 ]
 
+const FUNCTIONS = {
+  abs: Math.abs,
+  sqrt: Math.sqrt,
+  pow: Math.pow,
+  min: Math.min,
+  max: Math.max,
+  round: Math.round,
+  floor: Math.floor,
+  ceil: Math.ceil
+}
+
+const OPERATORS = {
+  '+': { precedence: 1, apply: (left, right) => left + right },
+  '-': { precedence: 1, apply: (left, right) => left - right },
+  '*': { precedence: 2, apply: (left, right) => left * right },
+  '/': { precedence: 2, apply: (left, right) => left / right },
+  '%': { precedence: 2, apply: (left, right) => left % right },
+  '^': { precedence: 3, right: true, apply: (left, right) => Math.pow(left, right) }
+}
+
+const tokenizeExpression = (expr) => {
+  const tokens = []
+  let index = 0
+
+  while (index < expr.length) {
+    const char = expr[index]
+    if (/\s/.test(char)) {
+      index += 1
+      continue
+    }
+
+    if (/[0-9.]/.test(char)) {
+      let end = index + 1
+      while (end < expr.length && /[0-9.eE+-]/.test(expr[end])) {
+        const previous = expr[end - 1]
+        if ((expr[end] === '+' || expr[end] === '-') && previous !== 'e' && previous !== 'E') break
+        end += 1
+      }
+      tokens.push({ type: 'number', value: Number(expr.slice(index, end)) })
+      index = end
+      continue
+    }
+
+    if (/[a-z_]/i.test(char)) {
+      let end = index + 1
+      while (end < expr.length && /[a-z0-9_]/i.test(expr[end])) end += 1
+      tokens.push({ type: 'identifier', value: expr.slice(index, end).toLowerCase() })
+      index = end
+      continue
+    }
+
+    if ('+-*/%^(),'.includes(char)) {
+      tokens.push({ type: char, value: char })
+      index += 1
+      continue
+    }
+
+    throw new Error('Unsupported token')
+  }
+
+  return tokens
+}
+
+const evaluateExpression = (expr, variables) => {
+  const tokens = tokenizeExpression(expr)
+  let index = 0
+
+  const peek = () => tokens[index]
+  const consume = (type = null) => {
+    const token = tokens[index]
+    if (!token || (type && token.type !== type)) throw new Error('Unexpected expression')
+    index += 1
+    return token
+  }
+
+  const parseArguments = () => {
+    const args = []
+    consume('(')
+    if (peek()?.type === ')') {
+      consume(')')
+      return args
+    }
+
+    while (index < tokens.length) {
+      args.push(parseExpression(0))
+      if (peek()?.type === ',') {
+        consume(',')
+        continue
+      }
+      consume(')')
+      return args
+    }
+
+    throw new Error('Unclosed function call')
+  }
+
+  const parsePrimary = () => {
+    const token = peek()
+    if (!token) throw new Error('Unexpected end')
+
+    if (token.type === '+') {
+      consume('+')
+      return parsePrimary()
+    }
+
+    if (token.type === '-') {
+      consume('-')
+      return -parsePrimary()
+    }
+
+    if (token.type === 'number') {
+      consume('number')
+      if (!Number.isFinite(token.value)) throw new Error('Invalid number')
+      return token.value
+    }
+
+    if (token.type === 'identifier') {
+      consume('identifier')
+      if (peek()?.type === '(') {
+        const fn = FUNCTIONS[token.value]
+        if (!fn) throw new Error('Unsupported function')
+        return fn(...parseArguments())
+      }
+      if (!Object.prototype.hasOwnProperty.call(variables, token.value)) {
+        throw new Error('Unknown variable')
+      }
+      return variables[token.value]
+    }
+
+    if (token.type === '(') {
+      consume('(')
+      const value = parseExpression(0)
+      consume(')')
+      return value
+    }
+
+    throw new Error('Unexpected token')
+  }
+
+  const parseExpression = (minPrecedence) => {
+    let left = parsePrimary()
+
+    while (true) {
+      const operator = OPERATORS[peek()?.type]
+      if (!operator || operator.precedence < minPrecedence) break
+
+      const symbol = consume().type
+      const nextMin = operator.right ? operator.precedence : operator.precedence + 1
+      const right = parseExpression(nextMin)
+      left = OPERATORS[symbol].apply(left, right)
+    }
+
+    return left
+  }
+
+  const value = parseExpression(0)
+  if (index !== tokens.length) throw new Error('Unexpected trailing tokens')
+  return value
+}
+
 // 计算结果
 const result = computed(() => {
   const expr = props.widget.expression
   if (!expr) return '—'
   
   try {
-    let formula = expr
-    
-    // 替换通道变量
+    const variables = {}
     store.channels.forEach((ch, i) => {
-      const regex = new RegExp(`ch${i}`, 'gi')
-      formula = formula.replace(regex, ch.value.toString())
+      variables[`ch${i}`] = Number(ch.value)
     })
     
-    // 支持一些数学函数
-    formula = formula.replace(/abs\(/gi, 'Math.abs(')
-    formula = formula.replace(/sqrt\(/gi, 'Math.sqrt(')
-    formula = formula.replace(/pow\(/gi, 'Math.pow(')
-    formula = formula.replace(/min\(/gi, 'Math.min(')
-    formula = formula.replace(/max\(/gi, 'Math.max(')
-    formula = formula.replace(/round\(/gi, 'Math.round(')
-    formula = formula.replace(/floor\(/gi, 'Math.floor(')
-    formula = formula.replace(/ceil\(/gi, 'Math.ceil(')
-    
-    // 计算结果
-    const value = eval(formula)
+    const value = evaluateExpression(expr, variables)
     
     if (typeof value === 'number') {
       if (Number.isNaN(value)) return 'NaN'

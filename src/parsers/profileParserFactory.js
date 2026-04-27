@@ -1,4 +1,4 @@
-import { normalizeUserProtocolProfile, toProtocolParserId } from '../utils/protocolProfiles'
+import { normalizeUserProtocolProfile, toProtocolParserId } from '../utils/protocolProfiles.js'
 
 const MAX_TLV_PACKET_SIZE = 1024 * 1024
 const decoder = new TextDecoder()
