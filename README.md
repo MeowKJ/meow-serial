@@ -7,6 +7,47 @@
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff)
 ![License](https://img.shields.io/badge/license-MIT-8bd3dd)
 
+## 在线体验
+
+- 线上地址：[https://s.mpas.top](https://s.mpas.top)
+- 串口工作台：[https://s.mpas.top/serial](https://s.mpas.top/serial)
+- AI 入口：[https://s.mpas.top/llms.txt](https://s.mpas.top/llms.txt)
+- 自定义解析器入门：[https://s.mpas.top/ai/custom-parser-primer.json](https://s.mpas.top/ai/custom-parser-primer.json)
+- 机器可读 API：[https://s.mpas.top/api/mserial](https://s.mpas.top/api/mserial)
+
+## 一句话说明
+
+Meow Serial 不是普通串口终端，而是一个浏览器里的**自定义协议解析工作台**：把串口 / WebSocket 原始数据解析成具名数值通道，再把通道放到实时图表、仪表盘、FFT、XY 图和控制控件里。
+
+如果你只是想收发文本，它可以当终端用；但它真正解决的问题是：
+
+```text
+设备协议资料 / 样例帧 -> AI 生成协议 JSON -> Meow Serial 解析 -> 命名通道 -> 实时看板
+```
+
+## 适合什么场景
+
+- 硬件调试时快速确认串口或 WebSocket 数据流
+- 把 CSV、JSON Lines、TLV 二进制包解析成稳定通道
+- 用 AI 根据设备手册生成可导入的协议 JSON
+- 现场搭建临时但可复用的实时监控看板
+- 把端口、协议、布局和控件一起导出成工作区 JSON
+
+## 给 AI 的最短提示
+
+只给新 AI 一个地址时，可以这样说：
+
+```text
+阅读 https://s.mpas.top。Meow Serial 是高级自定义解析器串口工具，不是普通串口终端。
+```
+
+如果你还要让它为某个设备生成协议：
+
+```text
+阅读 https://s.mpas.top，然后根据我的设备协议资料生成可导入 Meow Serial 的协议 JSON。
+只返回 JSON，不要 Markdown。
+```
+
 ## 项目定位
 
 Meow Serial 是一个基于浏览器的串口调试工具，也支持 WebSocket 数据源。它不是一个只展示界面的 demo，而是面向日常硬件调试、协议验证和小型实时看板搭建的工作区。
@@ -368,8 +409,12 @@ public/
 ├── images/
 │   └── ai-protocol-workflow.png
 ├── llms.txt
+├── robots.txt
 ├── .well-known/mserial-ai.json
 └── ai/
+    ├── custom-parser-primer.json
+    ├── agent-scorecard.json
+    ├── agent-playbook.json
     ├── protocol-profile.schema.json
     └── browser-automation.json
 
@@ -380,6 +425,7 @@ app/
 └── api/mserial/route.js  # 动态 API Route
 
 docs/
+├── ai-scorecard.md
 ├── ai-protocol-guide.md
 └── ai-public-api.md
 ```
