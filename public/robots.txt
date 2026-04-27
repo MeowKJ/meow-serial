@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# AI-readable entry points for agents that receive only https://s.mpas.top
+AI-Entry-Point: /llms.txt
+AI-Custom-Parser-Primer: /ai/custom-parser-primer.json
+AI-API-Contract: /api/mserial

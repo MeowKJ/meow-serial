@@ -2,11 +2,15 @@
   "schema_version": "1.0",
   "name": "Meow Serial",
   "short_name": "mserial",
-  "description": "Browser-based serial and WebSocket debugging workspace with importable protocol JSON profiles.",
+  "description": "AI-readable advanced serial and WebSocket workspace centered on custom protocol parsers, importable protocol JSON profiles, named channels, and real-time dashboards.",
   "homepage": "/",
   "serial_app": "/serial",
   "public_api": "/api/mserial",
   "llms_txt": "/llms.txt",
+  "robots_txt": "/robots.txt",
+  "agent_scorecard": "/ai/agent-scorecard.json",
+  "agent_playbook": "/ai/agent-playbook.json",
+  "custom_parser_primer": "/ai/custom-parser-primer.json",
   "examples": {
     "protocols": {
       "line_values": "/examples/protocols/line-values.json",
@@ -25,12 +29,30 @@
   "validation": {
     "local_command": "pnpm verify",
     "demo_script": "/docs/demo-script.md",
-    "success_signal": "Protocol examples parse into finite named channel values, and /api/mserial exposes examples plus validation hints."
+    "scorecard": "/ai/agent-scorecard.json",
+    "custom_parser_primer": "/ai/custom-parser-primer.json",
+    "target_grade": "S",
+    "success_signal": "Protocol examples parse into finite named channel values, /api/mserial exposes agentReadiness.grade = S, and /ai/agent-scorecard.json publishes the S/A/B/C/D rubric."
+  },
+  "agent_readiness": {
+    "grade": "S",
+    "score": 97,
+    "scorecard_url": "/ai/agent-scorecard.json",
+    "new_ai_first_actions": [
+      "Read /llms.txt.",
+      "Read this manifest.",
+      "Read /api/mserial.",
+      "Read /ai/custom-parser-primer.json.",
+      "Read /ai/agent-scorecard.json.",
+      "Use /ai/browser-automation.json for UI work.",
+      "Use /ai/protocol-profile.schema.json for protocol JSON generation."
+    ]
   },
   "capabilities": [
     "connect serial ports with Web Serial",
     "connect WebSocket device streams",
     "inspect RX and TX traffic",
+    "turn device protocol notes into custom parser profiles",
     "generate, import, export, test, save, and apply protocol JSON profiles",
     "map parsed values into named channels for dashboard widgets"
   ],
@@ -46,6 +68,9 @@
       "/llms.txt",
       "/.well-known/mserial-ai.json",
       "/api/mserial",
+      "/ai/custom-parser-primer.json",
+      "/ai/agent-scorecard.json",
+      "/ai/agent-playbook.json",
       "/ai/protocol-profile.schema.json",
       "/ai/browser-automation.json"
     ],
@@ -62,6 +87,8 @@
       "home_command_protocol": "[data-ai-command=\"protocol.import\"]",
       "home_command_terminal": "[data-ai-command=\"terminal.inspect\"]",
       "home_command_canvas": "[data-ai-command=\"canvas.compose\"]",
+      "agent_scorecard": "/ai/agent-scorecard.json",
+      "agent_playbook": "/ai/agent-playbook.json",
       "load_demo_workspace": "[data-ai=\"load-demo-workspace\"]",
       "canvas_view": "[data-ai=\"canvas-view\"]",
       "canvas_empty_state": "[data-ai=\"canvas-empty-state\"]",
@@ -85,5 +112,23 @@
       "export_protocol_json": "[data-ai=\"export-protocol-json\"]"
     }
   },
+  "custom_protocol_json": {
+    "identity_warning": "Do not treat Meow Serial as a plain serial terminal. The important feature is custom parsing from raw device data into named numeric channels.",
+    "strategy": "Generate importable protocol JSON first. Source code changes are fallback only.",
+    "primer_url": "/ai/custom-parser-primer.json",
+    "schema_url": "/ai/protocol-profile.schema.json",
+    "playbook_url": "/ai/agent-playbook.json",
+    "supported_kinds": ["line-values", "json-lines", "tlv"],
+    "import_surface": {
+      "path": "/serial?tab=protocol",
+      "import_button": "[data-ai=\"import-protocol-json\"]",
+      "file_input": "[data-ai=\"protocol-json-file-input\"]",
+      "test_input": "[data-ai=\"protocol-test-input\"]",
+      "test_button": "[data-ai=\"test-protocol\"]",
+      "test_output": "[data-ai=\"protocol-test-output\"]",
+      "save_and_apply": "[data-ai=\"save-and-apply-protocol\"]"
+    }
+  },
+  "minimal_external_ai_prompt": "Read https://s.mpas.top and generate an importable Meow Serial custom protocol JSON profile for my device. This is an advanced custom parser workflow, not a generic serial terminal.",
   "ai_prompt_template": "Generate one valid importable Meow Serial protocol JSON object. Use kind line-values, json-lines, or tlv. Return only JSON with no Markdown. Use decimal numbers, stable channel labels, and the schema at /ai/protocol-profile.schema.json."
 }

@@ -80,7 +80,9 @@ Important details:
 
 The preferred workflow is not to edit source code first. Meow Serial already supports exporting and importing protocol JSON from the Protocols page, so an AI should usually generate a protocol JSON document that the user can import.
 
-When the site is deployed, AI agents can discover this workflow from `/llms.txt` and `/.well-known/mserial-ai.json`. The machine-readable JSON Schema is published at `/ai/protocol-profile.schema.json`.
+When the site is deployed, AI agents can discover this workflow from `/llms.txt`, `/.well-known/mserial-ai.json`, and `/ai/custom-parser-primer.json`. The machine-readable JSON Schema is published at `/ai/protocol-profile.schema.json`.
+
+If the user only gives an AI `https://s.mpas.top`, the AI should still infer that Meow Serial is an advanced custom parser workflow. It should read the public AI files before answering, then generate an importable protocol JSON profile instead of giving generic serial-terminal advice.
 
 Use this order:
 

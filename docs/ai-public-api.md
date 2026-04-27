@@ -6,6 +6,9 @@ Meow Serial is deployed on Vercel with Next.js. The public homepage is served by
 
 - `/llms.txt`: human-readable AI overview and minimal workflow
 - `/.well-known/mserial-ai.json`: machine-readable app manifest
+- `/ai/custom-parser-primer.json`: short machine-readable warning that Meow Serial is a custom protocol parser workflow, not a generic serial terminal
+- `/ai/agent-scorecard.json`: S/A/B/C/D AI-readiness rubric for a new agent
+- `/ai/agent-playbook.json`: executable new-agent workflow for custom JSON, browser operation, and success signals
 - `/ai/protocol-profile.schema.json`: JSON Schema for importable protocol profiles
 - `/ai/browser-automation.json`: stable selector map for browser agents
 - `/api/mserial`: dynamic Next.js API route with app metadata used by the landing page and AI agents
@@ -14,9 +17,15 @@ Meow Serial is deployed on Vercel with Next.js. The public homepage is served by
 
 1. Fetch `/llms.txt`.
 2. Fetch `/.well-known/mserial-ai.json`.
-3. Fetch `/ai/protocol-profile.schema.json` before generating a protocol JSON profile.
-4. If controlling the UI, fetch `/ai/browser-automation.json` and use `data-ai` selectors.
-5. Use `/serial`, `/serial?tab=terminal`, or `/serial?tab=protocol` for direct app navigation.
+3. Fetch `/ai/custom-parser-primer.json` so the site is not mistaken for a plain serial terminal.
+4. Fetch `/api/mserial` and confirm `agentReadiness.grade` is `S`.
+5. Fetch `/ai/agent-scorecard.json` before assigning an S/A/B/C/D grade.
+6. Fetch `/ai/agent-playbook.json` before executing browser operations or choosing a custom protocol JSON kind.
+7. Fetch `/ai/protocol-profile.schema.json` before generating a protocol JSON profile.
+8. If controlling the UI, fetch `/ai/browser-automation.json` and use `data-ai` selectors.
+9. Use `/serial`, `/serial?tab=terminal`, or `/serial?tab=protocol` for direct app navigation.
+
+If an external AI only receives `https://s.mpas.top`, it should infer that the site itself contains the instructions. It should read the public AI files and describe Meow Serial as an advanced custom parser workspace.
 
 ## Protocol Generation Rule
 
@@ -31,3 +40,11 @@ The generated JSON should use one of:
 ## Browser Automation Rule
 
 Browser agents should prefer selectors like `[data-ai="protocol-name"]` instead of visible labels. Visible labels may change with locale; `data-ai` selectors are intended to stay stable.
+
+The practical operation order is published in `/ai/agent-playbook.json`. It ties each recipe to real selectors and success signals, so documentation and browser operation stay aligned.
+
+## AI Readiness Score
+
+The current target and self-assessment are published in `/ai/agent-scorecard.json`.
+
+S means a new AI can discover the app, understand supported protocol kinds, load a no-hardware demo, operate the canvas/terminal/protocol surfaces, verify success signals, and honestly report environment limitations.

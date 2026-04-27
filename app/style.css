@@ -261,6 +261,30 @@ h1 {
   line-height: 1.8;
 }
 
+.ai-primer-callout {
+  display: grid;
+  gap: 8px;
+  max-width: 690px;
+  border: 1px solid rgba(246, 193, 119, 0.32);
+  border-radius: 8px;
+  background: rgba(246, 193, 119, 0.08);
+  padding: 12px 14px;
+}
+
+.ai-primer-callout span {
+  color: var(--amber);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.ai-primer-callout code {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 .experience-modes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -808,6 +832,14 @@ h1 {
     line-height: 1.62;
   }
 
+  .ai-primer-callout {
+    padding: 10px 11px;
+  }
+
+  .ai-primer-callout code {
+    font-size: 12px;
+  }
+
   .experience-modes {
     gap: 6px;
   }
@@ -974,6 +1006,16 @@ h1 {
     line-height: 1.65;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+  }
+
+  .ai-primer-callout {
+    gap: 6px;
+    padding: 9px 10px;
+  }
+
+  .ai-primer-callout code {
+    font-size: 11px;
+    line-height: 1.45;
   }
 
   .hero-actions {

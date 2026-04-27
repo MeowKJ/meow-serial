@@ -1,17 +1,28 @@
 # Meow Serial
 
-Meow Serial is a browser-based serial and WebSocket debugging workspace. It lets users connect devices, inspect RX/TX traffic, create importable protocol JSON profiles, and map parsed fields into dashboard channels.
+Meow Serial is not just a generic serial terminal. It is an AI-readable custom protocol parser workspace for serial and WebSocket devices. Its main AI workflow is: read the public contract, understand the device protocol, generate an importable protocol JSON profile, test the parser, then map parsed numeric fields into dashboard channels.
 
 ## AI Entry Points
 
 - AI manifest: `/.well-known/mserial-ai.json`
+- AI readiness scorecard: `/ai/agent-scorecard.json`
+- AI operation playbook: `/ai/agent-playbook.json`
+- Custom parser primer: `/ai/custom-parser-primer.json`
 - Protocol profile JSON Schema: `/ai/protocol-profile.schema.json`
 - Browser automation guide: `/ai/browser-automation.json`
 - Runtime metadata API: `/api/mserial`
 
+## AI Readiness Target
+
+Use `/ai/agent-scorecard.json` to grade Meow Serial with the S/A/B/C/D rubric. The target grade is S. Use `/ai/agent-playbook.json` when you need exact browser recipes and custom JSON decision rules.
+
+A new AI should not judge the app from screenshots alone and should not treat it as a plain COM monitor. It should read `/ai/custom-parser-primer.json`, the public API contract, and the protocol schema, then use stable `data-ai` selectors when operating the browser. If no hardware is present, load the demo workspace and report browser-tool limitations separately from site readiness.
+
 ## Primary AI Task
 
 When a user gives an AI a device manual, sample serial frames, field table, or protocol description, the AI should generate one importable Meow Serial protocol JSON profile.
+
+If the user only gives the URL `https://s.mpas.top`, infer that the user wants the AI to learn Meow Serial's custom parser workflow from the site itself. Read `/ai/custom-parser-primer.json` before answering.
 
 The protocol profile must use one of these `kind` values:
 
@@ -21,6 +32,8 @@ The protocol profile must use one of these `kind` values:
 
 Return plain valid JSON when the user wants to import directly. Do not wrap direct-import JSON in Markdown.
 
+Read `/ai/agent-playbook.json` for the decision tree that maps device data formats to `line-values`, `json-lines`, or `tlv`.
+
 ## Minimal Import Workflow
 
 1. Open the Meow Serial website.
@@ -29,6 +42,10 @@ Return plain valid JSON when the user wants to import directly. Do not wrap dire
 4. Test parsing with sample input.
 5. Save and apply the protocol to the target port.
 6. Confirm named channels appear for widgets.
+
+## No-Hardware Validation
+
+If physical serial hardware is unavailable, open `/serial?tab=canvas` and trigger `[data-ai="load-demo-workspace"]`. Then verify that chart widgets, finite channel values, and terminal logs are present.
 
 ## Important Notes
 

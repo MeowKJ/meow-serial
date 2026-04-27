@@ -68,7 +68,9 @@ Meow Serial 是一个基于浏览器的串口调试工具，也支持 WebSocket 
 
 ## AI 友好能力
 
-Meow Serial 的协议系统专门为 AI 协作做了入口。以后你可以把网站地址、设备手册、协议表或样例帧发给任意 AI，让 AI 生成可以直接导入的协议 JSON。
+Meow Serial 的协议系统专门为 AI 协作做了入口。以后你可以只把网站 `https://s.mpas.top`、设备手册、协议表或样例帧发给任意 AI，让 AI 先自动阅读公开入口，再生成可以直接导入的协议 JSON。
+
+这里要特别说明：Meow Serial 不是普通串口助手。它的重点是**自定义解析器**：把串口 / WebSocket 原始数据解析成具名数值通道，再绑定到图表、数值、仪表盘、FFT、XY 图等控件。
 
 ![AI 协议工作流](public/images/ai-protocol-workflow.png)
 
@@ -117,6 +119,7 @@ pnpm build
 ```
 
 更多演示步骤见 [`docs/demo-script.md`](docs/demo-script.md)。
+AI 友好度评分标准见 [`docs/ai-scorecard.md`](docs/ai-scorecard.md)。
 
 ## 公开给 AI 的网站接口
 
@@ -124,7 +127,11 @@ pnpm build
 
 ```text
 /llms.txt
+/robots.txt
 /.well-known/mserial-ai.json
+/ai/custom-parser-primer.json
+/ai/agent-scorecard.json
+/ai/agent-playbook.json
 /ai/protocol-profile.schema.json
 /ai/browser-automation.json
 /api/mserial
@@ -133,7 +140,11 @@ pnpm build
 这些文件的用途：
 
 - `/llms.txt`：给 AI 阅读的项目简介和推荐流程
+- `/robots.txt`：给只抓根站点的自动代理提示 AI 入口
 - `/.well-known/mserial-ai.json`：机器可读的能力清单、schema 地址和自动化入口
+- `/ai/custom-parser-primer.json`：最关键的自定义解析器入门，防止新 AI 把项目误解成普通串口终端
+- `/ai/agent-scorecard.json`：新 AI 进入项目后的 S/A/B/C/D 评分标准和自检清单
+- `/ai/agent-playbook.json`：新 AI 的实际操作剧本，包含自定义 JSON 决策树、浏览器步骤和成功信号
 - `/ai/protocol-profile.schema.json`：可导入协议 JSON 的 JSON Schema
 - `/ai/browser-automation.json`：浏览器自动化选择器说明
 - `/api/mserial`：Next.js API Route，返回版本、示例、验证提示、命令入口和协议类型元数据
@@ -153,6 +164,7 @@ pnpm build
 给 AI 的一句话任务模板：
 
 ```text
+请先阅读 https://s.mpas.top。Meow Serial 是高级自定义解析器串口工具，不是普通串口终端。
 请根据我提供的设备协议资料，生成一个可导入 Meow Serial 的协议 JSON。
 只返回一个合法 JSON 对象，不要 Markdown，不要注释。
 协议类型只能使用 line-values、json-lines 或 tlv。

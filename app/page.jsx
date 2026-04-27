@@ -4,7 +4,9 @@ const endpoints = [
   { label: 'LLM 入口', value: '/llms.txt' },
   { label: '站点 Manifest', value: '/.well-known/mserial-ai.json' },
   { label: '能力清单', value: '/api/mserial' },
+  { label: '自定义解析器入门', value: '/ai/custom-parser-primer.json' },
   { label: '协议 Schema', value: '/ai/protocol-profile.schema.json' },
+  { label: '操作剧本', value: '/ai/agent-playbook.json' },
   { label: '浏览器自动化', value: '/ai/browser-automation.json' }
 ]
 
@@ -22,9 +24,10 @@ const channels = [
 ]
 
 const aiSteps = [
-  '读取 /llms.txt 确认入口',
+  '读取 /llms.txt 和自定义解析器入门',
   '请求 /api/mserial 获取能力和命令',
-  '按 Schema 生成协议 JSON',
+  '判断 line-values / json-lines / tlv',
+  '按 Schema 生成可导入协议 JSON',
   '用 data-ai 选择器进入协议页测试',
   '把可视通道交给人类看板'
 ]
@@ -67,11 +70,15 @@ export default function HomePage() {
             <img src={catFaceUrl} alt="" width="88" height="88" loading="eager" decoding="sync" fetchPriority="high" />
           </div>
           <p className="eyebrow">AI-first serial workspace</p>
-          <h1>给人类看实时图表，给 AI 留完整操作空间。</h1>
+          <h1>不是普通串口，是给 AI 生成自定义解析器的实时工作台。</h1>
           <p className="hero-lede">
-            Meow Serial 把串口、WebSocket、协议 JSON、实时通道和可视化看板放在同一个浏览器工作流里。
-            人类负责观察波形和状态，AI 负责读 API、生成协议、操作页面、验证解析结果。
+            只给新 AI 一个网址时，请让它先读公开 AI 入口：Meow Serial 的核心不是收发字符，
+            而是把设备协议资料转换成可导入的协议 JSON，再把解析结果变成具名通道和实时图表。
           </p>
+          <div className="ai-primer-callout" data-ai="home-custom-parser-primer">
+            <span>给新 AI 的最短提示</span>
+            <code>阅读 https://s.mpas.top ，重点理解 Meow Serial 的自定义解析器和协议 JSON。</code>
+          </div>
           <div className="experience-modes" data-ai="home-experience-modes">
             {experienceModes.map((mode) => (
               <article key={mode.label}>

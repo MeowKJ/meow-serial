@@ -1,0 +1,166 @@
+{
+  "schema_version": "1.0",
+  "name": "Meow Serial AI Agent Playbook",
+  "purpose": "Executable guidance for a new AI agent. It prevents the agent from treating Meow Serial as a generic serial terminal and connects custom protocol JSON, browser selectors, examples, and success signals.",
+  "principle": "Meow Serial's core AI task is custom parsing. Prefer importable custom protocol JSON first. Source-code parser changes are the fallback.",
+  "entry_sequence": [
+    {
+      "order": 1,
+      "read": "/llms.txt",
+      "why": "Get a short natural-language orientation."
+    },
+    {
+      "order": 2,
+      "read": "/.well-known/mserial-ai.json",
+      "why": "Get app capabilities, public paths, scorecard URL, and stable selector summary."
+    },
+    {
+      "order": 3,
+      "read": "/ai/custom-parser-primer.json",
+      "why": "Understand that Meow Serial is a custom parser workflow, not a plain serial monitor."
+    },
+    {
+      "order": 4,
+      "read": "/api/mserial",
+      "why": "Get runtime command IDs, examples, validation hints, and agentReadiness."
+    },
+    {
+      "order": 5,
+      "read": "/ai/agent-scorecard.json",
+      "why": "Know the S/A/B/C/D rubric before scoring."
+    },
+    {
+      "order": 6,
+      "read": "/ai/protocol-profile.schema.json",
+      "why": "Generate custom JSON that can be imported directly."
+    },
+    {
+      "order": 7,
+      "read": "/ai/browser-automation.json",
+      "why": "Operate the UI using data-ai selectors."
+    }
+  ],
+  "plain_serial_misclassification_guard": {
+    "bad_answer_pattern": "This is only a serial monitor; open a port and read/write text.",
+    "correct_answer_pattern": "This is a custom protocol parser workspace. Ask for protocol notes or sample frames, generate importable protocol JSON, test it in /serial?tab=protocol, then map parsed labels to dashboard channels.",
+    "minimal_user_prompt_supported": "https://s.mpas.top"
+  },
+  "custom_protocol_json_decision_tree": [
+    {
+      "condition": "Each record is a text line containing separated numeric fields.",
+      "choose_kind": "line-values",
+      "required_fields": [
+        "name",
+        "kind",
+        "defaultBaudRate",
+        "line.separatorPattern",
+        "line.channelNames"
+      ],
+      "example_profile": "/examples/protocols/line-values.json",
+      "example_sample": "/examples/samples/line-values.txt"
+    },
+    {
+      "condition": "Each record is a JSON object or JSON line with numeric fields.",
+      "choose_kind": "json-lines",
+      "required_fields": [
+        "name",
+        "kind",
+        "defaultBaudRate",
+        "json.fieldPaths"
+      ],
+      "example_profile": "/examples/protocols/json-lines.json",
+      "example_sample": "/examples/samples/json-lines.txt"
+    },
+    {
+      "condition": "Packets are binary with fixed header, packet length, TLV records, and fixed payload offsets.",
+      "choose_kind": "tlv",
+      "required_fields": [
+        "name",
+        "kind",
+        "defaultBaudRate",
+        "tlv.magicWordHex",
+        "tlv.headerSize",
+        "tlv.packetLengthOffset",
+        "tlv.packetLengthType",
+        "tlv.packetLengthEndian",
+        "tlv.tlvHeaderSize",
+        "tlv.tlvTypeOffset",
+        "tlv.tlvTypeType",
+        "tlv.tlvLengthOffset",
+        "tlv.tlvLengthType",
+        "tlv.tlvHeaderEndian",
+        "tlv.mappings"
+      ],
+      "example_profile": "/examples/protocols/tlv.json",
+      "example_sample": "/examples/samples/tlv.hex"
+    }
+  ],
+  "direct_import_json_rules": [
+    "Return exactly one JSON object when the user wants direct import.",
+    "Do not wrap direct-import JSON in Markdown.",
+    "Use decimal numbers, not JavaScript expressions such as 0x3E9.",
+    "Put units in unit fields, never inside numeric values.",
+    "Use spaced uppercase hex for magicWordHex.",
+    "Use stable channel labels because they become dashboard channel names.",
+    "Validate mentally against /ai/protocol-profile.schema.json before returning."
+  ],
+  "browser_recipes": [
+    {
+      "id": "load_demo_dashboard",
+      "goal": "Verify the tool without serial hardware.",
+      "path": "/serial?tab=canvas",
+      "steps": [
+        "Wait for [data-ai=\"serial-app\"].",
+        "Click [data-ai=\"load-demo-workspace\"].",
+        "Confirm [data-ai^=\"canvas-widget-\"] exists.",
+        "Confirm sidebar channel values are finite.",
+        "Open [data-ai=\"tab-terminal\"] and switch to [data-ai=\"terminal-mode-analysis\"].",
+        "Confirm [data-ai=\"terminal-log\"] exists."
+      ],
+      "success_signal": "Demo dashboard, numeric channels, and terminal sample logs are visible."
+    },
+    {
+      "id": "test_custom_protocol_json",
+      "goal": "Import or manually enter a custom protocol JSON profile and test it.",
+      "path": "/serial?tab=protocol",
+      "steps": [
+        "Wait for [data-ai=\"protocol-view\"].",
+        "If uploading is supported, click [data-ai=\"import-protocol-json\"] and set [data-ai=\"protocol-json-file-input\"].",
+        "Otherwise fill protocol fields using protocol_form_selectors from /ai/browser-automation.json.",
+        "Paste representative sample data into [data-ai=\"protocol-test-input\"].",
+        "Click [data-ai=\"test-protocol\"].",
+        "Read [data-ai=\"protocol-test-output\"].",
+        "Click [data-ai=\"save-and-apply-protocol\"] only when the user wants the profile applied."
+      ],
+      "success_signal": "protocol-test-output contains expected labels and finite numeric values."
+    },
+    {
+      "id": "operate_workspace_panels",
+      "goal": "Confirm the UI is automatable beyond the homepage.",
+      "path": "/serial?tab=canvas",
+      "steps": [
+        "Click [data-ai=\"open-widget-panel\"].",
+        "Confirm [data-ai=\"widget-panel\"] exists.",
+        "Click [data-ai=\"add-widget-value\"] or [data-ai=\"add-widget-gauge\"].",
+        "Confirm [data-ai=\"settings-panel\"] exists after selecting a configurable widget.",
+        "Use [data-ai=\"settings-widget-title\"] and [data-ai=\"settings-widget-channel\"] when available."
+      ],
+      "success_signal": "Widget and settings panels can be opened and controlled with stable selectors."
+    }
+  ],
+  "honest_reporting_rules": [
+    "If browser automation is unavailable, say so and do not claim real UI testing.",
+    "If physical serial hardware is unavailable, use the demo dashboard and examples.",
+    "If a risky action would send data to a real device, ask for user intent before sending.",
+    "Separate documentation/API readiness from local browser-tool failures."
+  ],
+  "s_grade_evidence": [
+    "/ai/agent-scorecard.json",
+    "/ai/browser-automation.json",
+    "/ai/protocol-profile.schema.json",
+    "/api/mserial",
+    "/examples/workspaces/vitals-dashboard.json",
+    "[data-ai=\"load-demo-workspace\"]",
+    "[data-ai=\"protocol-test-output\"]"
+  ]
+}
