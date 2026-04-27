@@ -121,13 +121,26 @@ const formatTick = (value) => {
 const getCssVar = (name, fallback) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
 
+const hexToRgba = (hex, alpha) => {
+  const normalized = String(hex || '').trim()
+  const match = normalized.match(/^#([0-9a-f]{6})$/i)
+  if (!match) return normalized
+  const intValue = Number.parseInt(match[1], 16)
+  const r = (intValue >> 16) & 255
+  const g = (intValue >> 8) & 255
+  const b = intValue & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+const getChipFill = () => hexToRgba(getCssVar('--cat-surface', '#F1F5F9'), 0.82)
+
 const getTimeSpanSec = (history) => {
   if (history.length < 2) return 0
   return Math.max(history[history.length - 1].time - history[0].time, 0) / 1000
 }
 
 const drawMetricChip = (x, y, width, title, value, color = null) => {
-  ctx.fillStyle = 'rgba(25, 28, 48, 0.72)'
+  ctx.fillStyle = getChipFill()
   ctx.fillRect(x, y, width, 34)
 
   ctx.fillStyle = getCssVar('--cat-muted', '#8E8E93')
@@ -146,7 +159,7 @@ const drawLegendChip = (x, y, width, channel) => {
     ? `${channel.value.toFixed(3)}${widgetUnit.value ? ` ${widgetUnit.value}` : ''}`
     : '--'
 
-  ctx.fillStyle = 'rgba(25, 28, 48, 0.72)'
+  ctx.fillStyle = getChipFill()
   ctx.fillRect(x, y, width, 32)
 
   ctx.fillStyle = channel.color

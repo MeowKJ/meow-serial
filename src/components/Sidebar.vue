@@ -153,7 +153,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
 </script>
 
 <template>
-  <aside class="w-[16.5rem] bg-cat-card border-r border-cat-border flex flex-col shrink-0 overflow-hidden">
+  <aside class="w-[16.5rem] bg-cat-card border-r border-cat-border flex flex-col shrink-0 overflow-hidden" data-ai="serial-sidebar">
 
     <!-- 浏览器支持检测 -->
     <div v-if="!portsStore.serialSupported" class="p-3 bg-yellow-500/20 border-b border-yellow-500/30">
@@ -171,6 +171,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
       <div class="border-b border-cat-border">
         <button
           @click="toggleCollapse('ports')"
+          data-ai="sidebar-toggle-ports"
           class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors"
         >
           <div class="flex items-center gap-2">
@@ -185,7 +186,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
         <div v-show="!collapsed.ports" class="px-3 pb-3 space-y-2.5">
 
           <!-- 端口列表 -->
-          <div v-for="portState in portsStore.ports" :key="portState.id" class="bg-cat-surface rounded-xl overflow-hidden border border-cat-border/70">
+          <div v-for="portState in portsStore.ports" :key="portState.id" class="bg-cat-surface rounded-xl overflow-hidden border border-cat-border/70" :data-ai="`sidebar-port-${portState.id}`">
 
             <!-- 端口头部 -->
             <div
@@ -210,6 +211,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
               <button
                 @click.stop="onTogglePort(portState.id)"
                 :disabled="isPortToggleDisabled(portState)"
+                :data-ai="`sidebar-toggle-port-${portState.id}`"
                 :class="[
                   'px-2.5 py-1 rounded-lg text-[11px] shrink-0 transition-colors',
                   portState.connected
@@ -232,6 +234,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
                 <label class="text-[10px] text-cat-muted block mb-0.5">端口名称</label>
                 <input
                   v-model="portState.label"
+                  :data-ai="`sidebar-port-label-${portState.id}`"
                   class="w-full bg-cat-dark border border-cat-border rounded-lg px-2 py-1.5 text-xs"
                   placeholder="例如: 雷达DATA"
                 >
@@ -243,6 +246,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
                   :value="portState.transportType"
                   @change="event => onChangeTransportType(portState.id, event.target.value)"
                   :disabled="portState.connected"
+                  :data-ai="`sidebar-port-transport-${portState.id}`"
                   class="w-full bg-cat-dark border border-cat-border rounded-lg px-2 py-1.5 text-xs disabled:opacity-50"
                 >
                   <option value="serial">Web Serial 串口</option>
@@ -255,6 +259,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
                 <button
                   @click="onSelectDevice(portState.id)"
                   :disabled="portState.connected"
+                  :data-ai="`sidebar-select-device-${portState.id}`"
                   class="w-full py-1.5 text-xs text-cat-primary hover:text-cat-text border border-dashed border-cat-border hover:border-cat-primary rounded-lg disabled:opacity-50 transition-colors"
                 >
                   {{ portState.portName ? '重新选择设备' : '➕ 选择设备' }}
@@ -267,6 +272,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
                   :value="portState.websocketUrl"
                   @input="event => portsStore.setPortWebSocketUrl(portState.id, event.target.value)"
                   :disabled="portState.connected"
+                  :data-ai="`sidebar-websocket-url-${portState.id}`"
                   class="w-full bg-cat-dark border border-cat-border rounded-lg px-2 py-1.5 text-xs disabled:opacity-50"
                   placeholder="例如: ws://192.168.4.1:81/tlv"
                 >
@@ -279,6 +285,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
                   :value="portState.baudRate"
                   @change="event => onChangeBaudRate(portState.id, event.target.value)"
                   :disabled="portState.connected"
+                  :data-ai="`sidebar-baud-rate-${portState.id}`"
                   class="w-full bg-cat-dark border border-cat-border rounded-lg px-2 py-1.5 text-xs disabled:opacity-50"
                 >
                   <option v-for="b in baudRates" :key="b" :value="b">{{ b }}</option>
@@ -317,6 +324,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
                 <select
                   :value="portState.parserId"
                   @change="e => onSelectParser(portState.id, e.target.value)"
+                  :data-ai="`sidebar-parser-${portState.id}`"
                   class="w-full bg-cat-dark border border-cat-border rounded-lg px-2 py-1.5 text-xs"
                 >
                   <option v-for="p in portsStore.getAvailableParsers()" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -384,13 +392,14 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
           <!-- 添加端口 -->
           <button
             @click="onAddPort"
+            data-ai="sidebar-add-port"
             class="w-full py-2 text-xs text-cat-primary hover:text-cat-text border border-dashed border-cat-border hover:border-cat-primary rounded-xl transition-colors"
           >
             ➕ 添加串口
           </button>
 
           <!-- 发送文件 -->
-          <div class="bg-cat-surface rounded-xl border border-cat-border/70 p-2.5 space-y-2">
+          <div class="bg-cat-surface rounded-xl border border-cat-border/70 p-2.5 space-y-2" data-ai="sidebar-send-file">
             <div class="text-xs text-cat-muted font-medium">发送文件</div>
             <div class="flex items-center gap-2">
               <select v-model="sendFileTarget" class="flex-1 bg-cat-dark border border-cat-border rounded-lg px-2 py-1 text-xs">
@@ -415,6 +424,7 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
       <div class="border-b border-cat-border">
         <button
           @click="toggleCollapse('channels')"
+          data-ai="sidebar-toggle-channels"
           class="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cat-surface/50 transition-colors"
         >
           <div class="flex items-center gap-2">

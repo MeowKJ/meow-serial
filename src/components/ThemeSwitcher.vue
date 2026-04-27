@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18nStore } from '../stores/i18n'
 import { useThemeStore } from '../stores/theme'
 import { useRenderingStore } from '../stores/rendering'
+import FluentEmoji from './common/FluentEmoji.vue'
 
 const i18n = useI18nStore()
 const themeStore = useThemeStore()
@@ -15,7 +16,14 @@ const toggleDarkMode = () => {
 
 // 主题图标
 const modeIcon = computed(() => {
-  return themeStore.isDark ? '🌙' : '☀️'
+  return themeStore.isDark ? 'crescentMoon' : 'sun'
+})
+
+const currentThemeEmoji = computed(() => {
+  if (themeStore.currentTheme === 'ragdoll') {
+    return themeStore.isDark ? 'blackCat' : 'catFace'
+  }
+  return ''
 })
 
 // 主题名称
@@ -45,7 +53,13 @@ const renderingModes = computed(() => [
       <button
         class="w-8 h-8 rounded-lg bg-cat-surface hover:bg-cat-border border border-cat-border flex items-center justify-center text-lg transition-colors"
         :title="`Theme: ${themeStore.themeName}`">
-        {{ themeStore.themeIcon }}
+        <FluentEmoji
+          v-if="currentThemeEmoji"
+          :name="currentThemeEmoji"
+          :size="22"
+          alt="Win11 cat face"
+        />
+        <span v-else>{{ themeStore.themeIcon }}</span>
       </button>
 
       <!-- 主题下拉菜单 -->
@@ -94,7 +108,7 @@ const renderingModes = computed(() => [
     <button @click="toggleDarkMode"
       class="w-8 h-8 rounded-lg bg-cat-surface hover:bg-cat-border border border-cat-border flex items-center justify-center text-lg transition-colors"
       :title="i18n.t('theme.switchToMode', { mode: themeStore.isDark ? i18n.t('theme.light') : i18n.t('theme.dark') })">
-      {{ modeIcon }}
+      <FluentEmoji :name="modeIcon" :size="22" :alt="modeName" />
     </button>
   </div>
 </template>

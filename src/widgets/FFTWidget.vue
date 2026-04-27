@@ -374,7 +374,7 @@ const draw = () => {
   ctx.textAlign = 'left'
   metricChips.value.forEach((chip, index) => {
     const x = 12 + index * (drawWidth / 4)
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)'
+    ctx.fillStyle = surfaceColor
     ctx.fillRect(x - 4, 6, Math.max(76, drawWidth / 4 - 10), 30)
     ctx.fillStyle = mutedColor
     ctx.font = '10px sans-serif'

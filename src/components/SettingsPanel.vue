@@ -128,21 +128,21 @@ const buttonStyleOptions = computed(() => ([
 </script>
 
 <template>
-  <aside class="w-[17rem] bg-cat-card border-l border-cat-border flex flex-col shrink-0">
+  <aside class="w-[17rem] bg-cat-card border-l border-cat-border flex flex-col shrink-0" data-ai="settings-panel">
     <div class="px-3 py-3 border-b border-cat-border flex items-center justify-between">
       <span class="font-medium">🔧 {{ i18n.t('settings.title') }}</span>
-      <button @click="emit('close')" class="text-cat-muted hover:text-cat-text">✕</button>
+      <button @click="emit('close')" data-ai="close-settings-panel" class="text-cat-muted hover:text-cat-text">✕</button>
     </div>
     
     <div v-if="widget" class="p-3 space-y-3 overflow-auto">
       <div v-if="widget.type !== 'sparkline'">
         <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.titleLabel') }}</label>
-        <input v-model="widget.title" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+        <input v-model="widget.title" data-ai="settings-widget-title" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
       </div>
       
       <div v-if="['value', 'gauge'].includes(widget.type)">
         <label class="text-xs text-cat-muted block mb-1">{{ i18n.t('settings.channelLabel') }}</label>
-        <select v-model="widget.channel" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
+        <select v-model="widget.channel" data-ai="settings-widget-channel" class="w-full bg-cat-surface border border-cat-border rounded-lg px-3 py-2 text-sm">
           <option v-for="ch in store.channels" :key="ch.id" :value="ch.id">{{ ch.name }}</option>
         </select>
       </div>

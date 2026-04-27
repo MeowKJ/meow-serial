@@ -126,6 +126,7 @@ export const useSerialStore = defineStore('serial', () => {
     const expectedKeys = new Set(descriptors.map(descriptor => descriptor.sourceKey))
 
     channels.value = channels.value.filter(channel => {
+      if (channel.demoChannel === true) return true
       if (channel.portId !== portId || !channel.autoCreated) return true
       return expectedKeys.has(channel.sourceKey)
     })
@@ -141,6 +142,7 @@ export const useSerialStore = defineStore('serial', () => {
     const activePortIds = new Set(portsStore.ports.map(port => port.id))
 
     channels.value = channels.value.filter(channel => {
+      if (channel.demoChannel === true) return true
       if (!channel.autoCreated) return false
       if (!channel.portId) return false
       return activePortIds.has(channel.portId)
@@ -290,7 +292,7 @@ export const useSerialStore = defineStore('serial', () => {
   const normalizeChannels = (items = []) => {
     const channelColors = themeStore.getChannelColors()
     return items
-      .filter(channel => channel?.autoCreated === true || (channel?.portId && channel?.sourceKey))
+      .filter(channel => channel?.demoChannel === true || channel?.autoCreated === true || (channel?.portId && channel?.sourceKey))
       .map((channel, index) => ({
         id: typeof channel.id === 'number' ? channel.id : index,
         name: channel.name || `通道${index + 1}`,
@@ -299,6 +301,7 @@ export const useSerialStore = defineStore('serial', () => {
         value: Number.isFinite(channel.value) ? channel.value : 0,
         portId: channel.portId || '',
         autoCreated: true,
+        demoChannel: channel.demoChannel === true,
         sourceKey: channel.sourceKey || ''
       }))
   }

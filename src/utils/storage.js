@@ -51,6 +51,7 @@ const serializeChannel = (channel) => ({
   value: channel.value ?? 0,
   portId: channel.portId || '',
   autoCreated: channel.autoCreated === true,
+  demoChannel: channel.demoChannel === true,
   sourceKey: channel.sourceKey || ''
 })
 

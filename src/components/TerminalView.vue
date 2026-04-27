@@ -1242,8 +1242,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col gap-3 p-3">
-    <div class="rounded-xl border border-cat-border bg-cat-card px-3 py-2 overflow-x-auto">
+  <div class="h-full flex flex-col gap-3 p-3" data-ai="terminal-view">
+    <div class="rounded-xl border border-cat-border bg-cat-card px-3 py-2 overflow-x-auto" data-ai="terminal-toolbar">
       <div class="flex items-center gap-2 min-w-max flex-nowrap">
         <div class="flex items-center gap-1.5 shrink-0">
           <span class="text-[11px] text-cat-muted">终端模式</span>
@@ -1252,6 +1252,7 @@ onUnmounted(() => {
               v-for="mode in ['交互', '分析']"
               :key="mode"
               @click="terminalMode = mode"
+              :data-ai="mode === '交互' ? 'terminal-mode-interactive' : 'terminal-mode-analysis'"
               :class="[
                 'px-2.5 py-0.5 text-[11px] rounded-md transition-colors',
                 terminalMode === mode ? 'bg-cat-primary text-white' : 'text-cat-muted hover:text-cat-text'
@@ -1269,6 +1270,7 @@ onUnmounted(() => {
               v-for="mode in ['UTF-8', 'HEX', '混合']"
               :key="mode"
               @click="analysisDisplayMode = mode"
+              :data-ai="`terminal-display-${mode}`"
               :class="[
                 'px-2.5 py-0.5 text-[11px] rounded-md transition-colors',
                 analysisDisplayMode === mode ? 'bg-cat-primary text-white' : 'text-cat-muted hover:text-cat-text'
@@ -1283,6 +1285,7 @@ onUnmounted(() => {
           <span class="text-[11px] text-cat-muted">终端范围</span>
           <select
             v-model="selectedPortId"
+            data-ai="terminal-port-select"
             class="min-w-[9.5rem] bg-cat-surface border border-cat-border rounded-lg px-2.5 py-1 text-[11px] text-cat-text"
           >
             <option v-for="port in portsStore.ports" :key="port.id" :value="port.id">
@@ -1316,7 +1319,7 @@ onUnmounted(() => {
           HEX翻译
         </label>
 
-        <button @click="copyTerminalLogs" class="cat-btn-secondary px-2.5 py-1 rounded-lg text-[11px] shrink-0">
+        <button @click="copyTerminalLogs" data-ai="terminal-copy-logs" class="cat-btn-secondary px-2.5 py-1 rounded-lg text-[11px] shrink-0">
           复制
         </button>
 
@@ -1325,11 +1328,12 @@ onUnmounted(() => {
             v-if="terminalMode === '交互'"
             @click="focusTerminal"
             :disabled="!canInteract"
+            data-ai="terminal-focus-input"
             class="cat-btn-secondary px-2.5 py-1 rounded-lg text-[11px] disabled:opacity-50"
           >
             聚焦输入
           </button>
-          <button @click="clearTerminal" class="cat-btn-secondary px-2.5 py-1 rounded-lg text-[11px]">
+          <button @click="clearTerminal" data-ai="terminal-clear" class="cat-btn-secondary px-2.5 py-1 rounded-lg text-[11px]">
             🗑️ 清空
           </button>
         </div>
@@ -1361,10 +1365,12 @@ onUnmounted(() => {
 
     <div
       class="relative flex-1 min-h-0 rounded-2xl border border-cat-border bg-cat-surface p-3"
+      data-ai="terminal-screen-frame"
       @click="focusTerminal"
     >
       <div
         ref="terminalEl"
+        data-ai="terminal-screen"
         class="h-full overflow-auto rounded-xl bg-cat-dark/45 px-4 py-3 font-mono text-sm text-cat-terminal-text terminal-screen"
         @scroll="handleTerminalScroll"
       >
@@ -1376,6 +1382,7 @@ onUnmounted(() => {
           <div
             v-for="log in filteredAnalysisLogs"
             :key="log.id"
+            data-ai="terminal-log"
             :data-analysis-log-id="log.id"
             class="log-item flex items-start gap-3 py-0.5 hover:bg-cat-border/30 px-2 -mx-2 rounded"
           >
@@ -1568,6 +1575,7 @@ onUnmounted(() => {
       <textarea
         v-if="terminalMode === '交互'"
         ref="inputCaptureEl"
+        data-ai="terminal-input-capture"
         class="terminal-capture"
         spellcheck="false"
         autocapitalize="off"
@@ -1581,7 +1589,7 @@ onUnmounted(() => {
       />
     </div>
 
-    <div v-if="terminalMode === '分析'" class="rounded-2xl border border-cat-border bg-cat-card px-3 py-2">
+    <div v-if="terminalMode === '分析'" class="rounded-2xl border border-cat-border bg-cat-card px-3 py-2" data-ai="terminal-analysis-timeline">
       <div class="flex items-center gap-2 text-[10px] font-mono shrink-0 flex-wrap">
         <div
           @click="dataFilter = 'all'"
@@ -1654,7 +1662,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="terminalMode === '分析'" class="rounded-2xl border border-cat-border bg-cat-card px-3 py-3">
+    <div v-if="terminalMode === '分析'" class="rounded-2xl border border-cat-border bg-cat-card px-3 py-3" data-ai="terminal-analysis-send-panel">
       <div class="flex flex-col gap-3">
         <div class="flex items-center gap-3 text-xs text-cat-muted flex-wrap">
           <span>分析模式发送</span>
@@ -1667,6 +1675,7 @@ onUnmounted(() => {
           <input
             v-model="analysisSendInput"
             :disabled="!canInteract"
+            data-ai="terminal-analysis-send-input"
             :placeholder="analysisSendAsHex ? '输入 HEX 数据，如 01 03 0A FF' : '输入要发送的文本...'"
             class="min-w-[16rem] flex-1 rounded-xl border border-cat-border bg-cat-surface px-3 py-2 text-sm text-cat-text disabled:opacity-50"
             :class="analysisSendAsHex ? 'font-mono' : ''"
@@ -1689,6 +1698,7 @@ onUnmounted(() => {
             <button
               @click="sendAnalysisInput"
               :disabled="!canAnalysisSend"
+              data-ai="terminal-analysis-send"
               class="cat-btn px-4 py-2 rounded-xl text-sm text-white disabled:opacity-50"
             >
               发送

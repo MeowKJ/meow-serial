@@ -26,8 +26,8 @@ const addWidget = (widgetType) => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-cat-dark/60" @click="emit('close')">
-    <div class="bg-cat-card rounded-2xl w-[640px] max-h-[80vh] overflow-hidden shadow-2xl" @click.stop>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-cat-dark/60" data-ai="widget-panel-overlay" @click="emit('close')">
+    <div class="bg-cat-card rounded-2xl w-[640px] max-h-[80vh] overflow-hidden shadow-2xl" data-ai="widget-panel" @click.stop>
       <div class="p-5 border-b border-cat-border flex items-center justify-between">
         <div class="flex items-center gap-3">
           <span class="text-2xl">🧩</span>
@@ -36,7 +36,7 @@ const addWidget = (widgetType) => {
             <p class="text-sm text-cat-muted">{{ i18n.t('widgetPanel.subtitle') }}</p>
           </div>
         </div>
-        <button @click="emit('close')" class="w-8 h-8 rounded-lg hover:bg-cat-surface flex items-center justify-center text-cat-muted">✕</button>
+        <button @click="emit('close')" data-ai="close-widget-panel" class="w-8 h-8 rounded-lg hover:bg-cat-surface flex items-center justify-center text-cat-muted">✕</button>
       </div>
       
       <div class="p-5 grid grid-cols-3 gap-3 max-h-[60vh] overflow-auto">
@@ -44,6 +44,7 @@ const addWidget = (widgetType) => {
           v-for="w in localizedWidgetTypes" 
           :key="w.type" 
           @click="addWidget(w)"
+          :data-ai="`add-widget-${w.type}`"
           class="p-4 rounded-xl bg-cat-surface hover:bg-cat-border/50 text-left transition-all group"
         >
           <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{{ w.icon }}</div>

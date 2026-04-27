@@ -16,7 +16,13 @@ import SparklineWidget from '../widgets/SparklineWidget.vue'
 import XYPlotWidget from '../widgets/XYPlotWidget.vue'
 
 const store = useSerialStore()
-const emit = defineEmits(['update:selectedWidget', 'show-context-menu', 'show-canvas-context-menu'])
+const emit = defineEmits([
+  'update:selectedWidget',
+  'show-context-menu',
+  'show-canvas-context-menu',
+  'show-widget-panel',
+  'load-demo-workspace'
+])
 const props = defineProps({
   selectedWidget: [Number, null]
 })
@@ -211,6 +217,7 @@ const getWidgetDisplayTitle = (widget) => {
 
 // 开始拖拽
 const startDrag = (widget, e) => {
+  e.preventDefault()
   dragWidget = widget
   dragStartX = e.clientX - widget.x
   dragStartY = e.clientY - widget.y
@@ -230,6 +237,7 @@ const startContentDrag = (widget, e) => {
 
 const onDrag = (e) => {
   if (!dragWidget) return
+  e.preventDefault()
   const snapped = snapDragPosition(
     dragWidget,
     e.clientX - dragStartX,
@@ -246,6 +254,7 @@ const stopDrag = () => {
 
 // 开始缩放
 const startResize = (widget, dir, e) => {
+  e.preventDefault()
   e.stopPropagation()
   resizeWidget = widget
   resizeDir = dir
@@ -261,6 +270,7 @@ const startResize = (widget, dir, e) => {
 
 const onResize = (e) => {
   if (!resizeWidget) return
+  e.preventDefault()
   const dx = e.clientX - dragStartX
   const dy = e.clientY - dragStartY
   
@@ -328,8 +338,9 @@ onUnmounted(() => {
 <template>
   <div 
     ref="canvasRoot"
+    data-ai="canvas-view"
     :class="[
-      'h-full bg-cat-bg relative overflow-auto p-4',
+      'h-full bg-cat-bg relative overflow-auto p-4 select-none',
       store.canvas?.backdropMode === 'grid' ? 'canvas-backdrop-grid' : '',
       store.canvas?.backdropMode === 'dots' ? 'canvas-backdrop-dots' : ''
     ]"
@@ -340,8 +351,9 @@ onUnmounted(() => {
     <div 
       v-for="widget in store.widgets" 
       :key="widget.id"
+      :data-ai="`canvas-widget-${widget.type}-${widget.id}`"
       :class="[
-        'widget-container widget-shell absolute bg-cat-card border border-cat-border/70 rounded-xl overflow-hidden cursor-move',
+        'widget-container widget-shell absolute bg-cat-card border border-cat-border/70 rounded-xl overflow-hidden cursor-move select-none',
         selectedWidget === widget.id ? 'widget-selected' : ''
       ]"
       :style="{
@@ -409,11 +421,36 @@ onUnmounted(() => {
     </div>
     
     <!-- 空状态 -->
-    <div v-if="store.widgets.length === 0" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <div class="text-center">
-        <div class="text-6xl mb-4">📈</div>
-        <div class="text-cat-text text-lg">画布当前没有图表</div>
-        <div class="text-cat-muted text-sm mt-2">左侧雷达工具里点「添加呼吸图」或「添加能量图」</div>
+    <div v-if="store.widgets.length === 0" class="absolute inset-0 flex items-center justify-center px-6">
+      <div class="canvas-empty-card" data-ai="canvas-empty-state">
+        <div class="canvas-empty-icon">📈</div>
+        <div class="text-cat-text text-xl font-semibold">画布正在等待第一组实时图表</div>
+        <div class="text-cat-muted text-sm mt-2 max-w-xl mx-auto">
+          可以加载内置生命体征示例，立即查看波形、数值卡片和仪表盘；也可以从控件面板手动组合自己的串口看板。
+        </div>
+        <div class="mt-5 flex flex-wrap items-center justify-center gap-3 pointer-events-auto">
+          <button
+            type="button"
+            class="cat-btn rounded-xl px-4 py-2 text-sm text-white shadow-sm"
+            data-ai="canvas-load-demo-workspace"
+            @click.stop="$emit('load-demo-workspace')"
+          >
+            加载示例看板
+          </button>
+          <button
+            type="button"
+            class="cat-btn-secondary rounded-xl px-4 py-2 text-sm"
+            data-ai="canvas-open-widget-panel"
+            @click.stop="$emit('show-widget-panel')"
+          >
+            打开控件面板
+          </button>
+        </div>
+        <div class="mt-4 grid grid-cols-3 gap-2 text-[11px] text-cat-muted">
+          <span class="rounded-lg bg-cat-surface/60 px-2 py-1">图表</span>
+          <span class="rounded-lg bg-cat-surface/60 px-2 py-1">终端</span>
+          <span class="rounded-lg bg-cat-surface/60 px-2 py-1">协议</span>
+        </div>
       </div>
     </div>
   </div>
@@ -423,6 +460,8 @@ onUnmounted(() => {
 .edge-resize-zone {
   position: absolute;
   z-index: 4;
+  user-select: none;
+  touch-action: none;
 }
 
 .edge-resize-top,
@@ -489,6 +528,8 @@ onUnmounted(() => {
 }
 
 .widget-shell {
+  user-select: none;
+  -webkit-user-select: none;
   transform: translateZ(0);
   backface-visibility: hidden;
   will-change: transform, width, height;
@@ -533,5 +574,32 @@ onUnmounted(() => {
   transform: translateZ(0);
   backface-visibility: hidden;
   will-change: transform;
+}
+
+.canvas-empty-card {
+  width: min(620px, 100%);
+  border: 1px solid color-mix(in srgb, var(--cat-border) 70%, transparent);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cat-card) 92%, transparent), color-mix(in srgb, var(--cat-surface) 52%, transparent)),
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cat-primary) 16%, transparent), transparent 44%);
+  padding: 28px;
+  text-align: center;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.canvas-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--cat-primary) 12%, var(--cat-card));
+  font-size: 38px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 </style>

@@ -17,7 +17,25 @@
     "api_path": "/api/mserial",
     "protocols_tab": "[data-ai=\"tab-protocol\"]",
     "terminal_tab": "[data-ai=\"tab-terminal\"]",
-    "canvas_tab": "[data-ai=\"tab-canvas\"]"
+    "canvas_tab": "[data-ai=\"tab-canvas\"]",
+    "load_demo_workspace": "[data-ai=\"load-demo-workspace\"]",
+    "open_widget_panel": "[data-ai=\"open-widget-panel\"]",
+    "export_workspace": "[data-ai=\"export-workspace\"]",
+    "import_workspace": "[data-ai=\"import-workspace\"]"
+  },
+  "serial_workbench_selectors": {
+    "app": "[data-ai=\"serial-app\"]",
+    "sidebar": "[data-ai=\"serial-sidebar\"]",
+    "canvas": "[data-ai=\"canvas-view\"]",
+    "canvas_empty_state": "[data-ai=\"canvas-empty-state\"]",
+    "canvas_load_demo": "[data-ai=\"canvas-load-demo-workspace\"]",
+    "canvas_open_widgets": "[data-ai=\"canvas-open-widget-panel\"]",
+    "widget_panel": "[data-ai=\"widget-panel\"]",
+    "settings_panel": "[data-ai=\"settings-panel\"]",
+    "terminal": "[data-ai=\"terminal-view\"]",
+    "terminal_toolbar": "[data-ai=\"terminal-toolbar\"]",
+    "terminal_screen": "[data-ai=\"terminal-screen\"]",
+    "terminal_analysis_send_panel": "[data-ai=\"terminal-analysis-send-panel\"]"
   },
   "home_selectors": {
     "view": "[data-ai=\"home-view\"]",
@@ -98,6 +116,11 @@
     "test": "[data-ai=\"test-protocol\"]",
     "export_json": "[data-ai=\"export-protocol-json\"]",
     "import_json": "[data-ai=\"import-protocol-json\"]",
-    "clear_draft": "[data-ai=\"clear-protocol-draft\"]"
+    "clear_draft": "[data-ai=\"clear-protocol-draft\"]",
+    "load_demo_workspace": "[data-ai=\"load-demo-workspace\"]",
+    "open_widget_panel": "[data-ai=\"open-widget-panel\"]",
+    "add_waveform_widget": "[data-ai=\"add-widget-waveform\"]",
+    "add_value_widget": "[data-ai=\"add-widget-value\"]",
+    "add_gauge_widget": "[data-ai=\"add-widget-gauge\"]"
   }
 }

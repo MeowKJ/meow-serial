@@ -36,6 +36,15 @@ const metadata = {
   },
   entryActions: [
     {
+      id: 'demo.load',
+      label: '加载示例看板',
+      target: '/serial?tab=canvas',
+      selector: '[data-ai="load-demo-workspace"]',
+      precondition: 'None. This loads the public vitals demo workspace and synthetic history into the local browser workspace.',
+      successSignal: '[data-ai^="canvas-widget-"] exists and the sidebar shows finite channel values.',
+      description: '一键进入有图表、有数值、有仪表盘的可视化演示状态。'
+    },
+    {
       id: 'protocol.import',
       label: '导入协议 JSON',
       target: '/serial?tab=protocol',
@@ -107,6 +116,15 @@ const metadata = {
     }
   },
   aiCommands: [
+    {
+      id: 'demo.load',
+      href: '/serial?tab=canvas',
+      homeSelector: '[data-ai="load-demo-workspace"]',
+      expectedUrl: '/serial?tab=canvas',
+      precondition: 'None.',
+      successSignal: '[data-ai^="canvas-widget-"] exists after clicking the demo loader.',
+      outcome: 'Open a populated live dashboard suitable for first-run inspection and visual validation.'
+    },
     {
       id: 'protocol.import',
       href: '/serial?tab=protocol',

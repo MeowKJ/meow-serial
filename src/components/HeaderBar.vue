@@ -31,7 +31,7 @@ defineProps({
   isRecording: Boolean
 })
 
-const emit = defineEmits(['set-tab', 'clear-all', 'show-widget-panel', 'open-home'])
+const emit = defineEmits(['set-tab', 'clear-all', 'show-widget-panel', 'load-demo-workspace', 'open-home'])
 
 const exportLayout = () => {
   store.saveWorkspaceState()
@@ -99,7 +99,7 @@ const toggleCanvasBackdropPattern = () => {
           title="回到首页"
           @click="$emit('open-home')"
         >
-          <FluentEmoji name="cat" :size="18" alt="cat" />
+          <FluentEmoji name="catFace" :size="18" alt="Win11 cat face" />
         </button>
         <div class="flex items-center gap-1.5 min-w-0">
           <span class="font-semibold text-sm text-cat-text truncate">{{ i18n.t('header.appTitle') }}</span>
@@ -109,8 +109,11 @@ const toggleCanvasBackdropPattern = () => {
 
       <div class="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto">
         <div class="header-group shrink-0">
-          <button @click="$emit('show-widget-panel')" class="header-action">
+          <button @click="$emit('show-widget-panel')" class="header-action" data-ai="open-widget-panel">
             <FluentEmoji name="puzzlePiece" :size="16" alt="" /> {{ i18n.t('header.buttons.widgets') }}
+          </button>
+          <button @click="$emit('load-demo-workspace')" class="header-action header-action-feature" data-ai="load-demo-workspace">
+            <span>📊</span> 示例看板
           </button>
           <button
             v-if="activeTab === 'canvas'"
@@ -120,6 +123,7 @@ const toggleCanvasBackdropPattern = () => {
               canvasBackdropMode !== 'blank' ? 'header-action-active' : ''
             ]"
             :title="i18n.t('header.backgroundTitle')"
+            data-ai="toggle-canvas-backdrop"
           >
             <span>{{ canvasBackdropIcon }}</span> {{ i18n.t('header.buttons.background') }}: {{ canvasBackdropLabel }}
           </button>
@@ -127,6 +131,7 @@ const toggleCanvasBackdropPattern = () => {
             @click="exportLayout"
             :title="i18n.t('header.exportTitle')"
             class="header-action"
+            data-ai="export-workspace"
           >
             <FluentEmoji name="floppyDisk" :size="16" alt="" /> {{ i18n.t('header.buttons.export') }}
           </button>
@@ -134,10 +139,11 @@ const toggleCanvasBackdropPattern = () => {
             @click="importLayout"
             :title="i18n.t('header.importTitle')"
             class="header-action"
+            data-ai="import-workspace"
           >
             <FluentEmoji name="fileFolder" :size="16" alt="" /> {{ i18n.t('header.buttons.import') }}
           </button>
-          <button @click="confirmClearAll" class="header-action header-action-danger">
+          <button @click="confirmClearAll" class="header-action header-action-danger" data-ai="clear-workspace">
             <FluentEmoji name="wastebasket" :size="16" alt="" /> {{ i18n.t('header.buttons.clearAll') }}
           </button>
         </div>
@@ -235,6 +241,11 @@ const toggleCanvasBackdropPattern = () => {
 .header-action-active {
   color: var(--cat-primary);
   background: color-mix(in srgb, var(--cat-primary) 12%, transparent);
+}
+
+.header-action-feature {
+  color: color-mix(in srgb, var(--cat-primary) 76%, var(--cat-text) 24%);
+  background: color-mix(in srgb, var(--cat-primary) 10%, transparent);
 }
 
 .header-tab-active {
