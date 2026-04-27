@@ -4,13 +4,16 @@
   "purpose": "Stable browser automation guide for AI agents controlling the web UI, especially the custom protocol parser workflow.",
   "general_rules": [
     "Start discovery with /llms.txt, then /.well-known/mserial-ai.json, then /api/mserial.",
+    "If the user gives only https://s.mpas.top, read /ai/agent-route.json first.",
     "Read /ai/custom-parser-primer.json so the app is not misclassified as a generic serial terminal.",
+    "Read /ai/parser-extension-policy.json before recommending embedded parser code or source-code parser changes.",
     "Read /ai/agent-scorecard.json before assigning an S/A/B/C/D AI-friendliness grade.",
     "Read /ai/agent-playbook.json before executing a custom protocol JSON or browser workflow.",
     "Prefer data-ai selectors over visible text.",
     "Prefer data-ai-command selectors for high-level home navigation.",
     "Wait for [data-ai=\"protocol-view\"] before editing protocol profiles.",
     "When importing a protocol JSON file, use the hidden file input at [data-ai=\"protocol-json-file-input\"] if the automation runtime supports file uploads.",
+    "When importing a workspace JSON from the repository or another HTTP(S) endpoint, use [data-ai=\"import-workspace-url\"] or open /serial?workspace=/examples/workspaces/vitals-dashboard.json.",
     "After importing or manually entering a profile, use [data-ai=\"test-protocol\"] with representative sample input before saving.",
     "Use [data-ai=\"save-and-apply-protocol\"] when a port is selected and the user wants the profile applied immediately."
   ],
@@ -19,6 +22,8 @@
     "serial_path": "/serial",
     "api_path": "/api/mserial",
     "custom_parser_primer_path": "/ai/custom-parser-primer.json",
+    "agent_route_path": "/ai/agent-route.json",
+    "parser_extension_policy_path": "/ai/parser-extension-policy.json",
     "scorecard_path": "/ai/agent-scorecard.json",
     "playbook_path": "/ai/agent-playbook.json",
     "protocols_tab": "[data-ai=\"tab-protocol\"]",
@@ -27,12 +32,14 @@
     "load_demo_workspace": "[data-ai=\"load-demo-workspace\"]",
     "open_widget_panel": "[data-ai=\"open-widget-panel\"]",
     "export_workspace": "[data-ai=\"export-workspace\"]",
-    "import_workspace": "[data-ai=\"import-workspace\"]"
+    "import_workspace": "[data-ai=\"import-workspace\"]",
+    "import_workspace_url": "[data-ai=\"import-workspace-url\"]",
+    "workspace_url_param": "/serial?workspace=/examples/workspaces/vitals-dashboard.json"
   },
   "new_agent_s_checklist": [
     {
       "step": "discover",
-      "action": "Fetch /llms.txt, /ai/custom-parser-primer.json, /.well-known/mserial-ai.json, /api/mserial, and /ai/agent-scorecard.json.",
+      "action": "Fetch /llms.txt, /ai/agent-route.json, /ai/custom-parser-primer.json, /ai/parser-extension-policy.json, /.well-known/mserial-ai.json, /api/mserial, and /ai/agent-scorecard.json.",
       "success_signal": "The agent says Meow Serial is a custom protocol parser workspace, /api/mserial exposes agentReadiness.grade = S, and the scorecard target_grade is S."
     },
     {
@@ -68,7 +75,12 @@
     "terminal": "[data-ai=\"terminal-view\"]",
     "terminal_toolbar": "[data-ai=\"terminal-toolbar\"]",
     "terminal_screen": "[data-ai=\"terminal-screen\"]",
-    "terminal_analysis_send_panel": "[data-ai=\"terminal-analysis-send-panel\"]"
+    "terminal_analysis_send_panel": "[data-ai=\"terminal-analysis-send-panel\"]",
+    "send_file_panel": "[data-ai=\"sidebar-send-file\"]",
+    "send_file_port_select": "[data-ai=\"send-file-port-select\"]",
+    "send_file_delay_ms": "[data-ai=\"send-file-delay-ms\"]",
+    "send_file_input": "[data-ai=\"send-file-input\"]",
+    "send_file_start": "[data-ai=\"send-file-start\"]"
   },
   "home_selectors": {
     "view": "[data-ai=\"home-view\"]",
@@ -152,6 +164,9 @@
     "import_json": "[data-ai=\"import-protocol-json\"]",
     "clear_draft": "[data-ai=\"clear-protocol-draft\"]",
     "load_demo_workspace": "[data-ai=\"load-demo-workspace\"]",
+    "export_workspace": "[data-ai=\"export-workspace\"]",
+    "import_workspace_file": "[data-ai=\"import-workspace\"]",
+    "import_workspace_url": "[data-ai=\"import-workspace-url\"]",
     "open_widget_panel": "[data-ai=\"open-widget-panel\"]",
     "add_waveform_widget": "[data-ai=\"add-widget-waveform\"]",
     "add_value_widget": "[data-ai=\"add-widget-value\"]",

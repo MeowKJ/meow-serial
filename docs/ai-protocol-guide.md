@@ -80,7 +80,7 @@ Important details:
 
 The preferred workflow is not to edit source code first. Meow Serial already supports exporting and importing protocol JSON from the Protocols page, so an AI should usually generate a protocol JSON document that the user can import.
 
-When the site is deployed, AI agents can discover this workflow from `/llms.txt`, `/.well-known/mserial-ai.json`, and `/ai/custom-parser-primer.json`. The machine-readable JSON Schema is published at `/ai/protocol-profile.schema.json`.
+When the site is deployed, AI agents can discover this workflow from `/llms.txt`, `/ai/agent-route.json`, `/.well-known/mserial-ai.json`, and `/ai/custom-parser-primer.json`. The machine-readable JSON Schema is published at `/ai/protocol-profile.schema.json`.
 
 If the user only gives an AI `https://s.mpas.top`, the AI should still infer that Meow Serial is an advanced custom parser workflow. It should read the public AI files before answering, then generate an importable protocol JSON profile instead of giving generic serial-terminal advice.
 
@@ -94,6 +94,40 @@ Use this order:
 6. Only change source code if the protocol cannot fit the JSON profile schema.
 
 Good AI output should be import-ready JSON, with no comments inside the JSON.
+
+## Parser Code Boundary
+
+Protocol JSON is declarative configuration. It must not contain executable parser code such as JavaScript function bodies, `eval` expressions, C/C++ snippets, or remote code URLs. Imported profiles can be produced by external AI tools, so executing code from them would make the browser workspace unsafe and difficult to reason about.
+
+Use this extension order:
+
+1. **Protocol JSON first**: use `line-values`, `json-lines`, or `tlv` whenever the schema can describe the device output.
+2. **Embedded-side normalization**: if firmware can be changed, let the device output JSON Lines, separated numeric lines, or a simple fixed-offset TLV frame. AI can help write that embedded code, but Meow Serial should still receive a declarative protocol JSON profile.
+3. **Reviewed browser parser module**: if the browser must handle checksum validation, byte stuffing, varints, compression, cross-packet calculations, arrays, matrices, or other schema-breaking features, add a source-code parser module and register it in `src/parsers/index.js`.
+4. **Future plugin path**: if shareable executable parser logic is needed later, prefer a sandboxed format such as WASM plus a signed/validated manifest. Do not run raw JavaScript from imported JSON.
+
+The machine-readable policy is published at `/ai/parser-extension-policy.json`.
+
+### TLV Binary Protocols
+
+TLV means Type-Length-Value. It is a general binary encoding pattern, not a TI-only protocol. TI mmWave UART output commonly uses TLV-style packets, but the same profile kind can describe other TLV-like devices too.
+
+For TLV-style binary output, a new AI should first assume the protocol may fit the declarative `tlv` profile. Meow Serial can parse it when each packet has a readable packet length, each TLV has readable type and length fields, and target values sit at fixed offsets inside a TLV payload.
+
+Ask for these fields before generating JSON:
+
+- `magicWordHex`, if the stream has a sync word.
+- `headerSize`.
+- `packetLengthOffset`, `packetLengthType`, and `packetLengthEndian`.
+- `tlvCountOffset`, `tlvCountType`, and `tlvCountEndian`, or `tlvCountOffset: -1` if there is no TLV count.
+- `tlvHeaderSize`.
+- `tlvTypeOffset`, `tlvTypeType`, `tlvLengthOffset`, and `tlvLengthType`.
+- `tlvHeaderEndian`.
+- Whether `tlvLengthIncludesHeader` is true.
+- For each target value: `label`, `tlvType`, `valueOffset`, `valueType`, `endian`, `scale`, and `unit`.
+- One representative hex frame and the expected decoded values.
+
+If the target value is derived across packets, hidden in compressed arrays, guarded by checksum-only framing, or stored at variable offsets, choose embedded-side normalization or a reviewed source-code parser instead of forcing it into protocol JSON.
 
 ### Prompt Template For Generating Protocol JSON
 
@@ -368,7 +402,7 @@ export const syncRegisteredParsers = () => {
 }
 ```
 
-If you register legacy parser files such as `csvParser`, `jsonParser`, `justfloatParser`, or `mmwaveBreathParser`, import and register them the same way. At the time this guide was written, only `raw` and user profiles are registered by default.
+At the time this guide was written, only `raw` and user profiles are registered by default. Avoid adding fixed parser modules for formats that can already be expressed as protocol JSON profiles.
 
 ## Updating The Protocol UI
 

@@ -11,6 +11,7 @@ const store = useSerialStore()
 const i18n = useI18nStore()
 const portsStore = usePortsStore()
 const importInput = ref(null)
+const defaultOnlineWorkspaceUrl = '/examples/workspaces/vitals-dashboard.json'
 
 const connectedCount = computed(() => portsStore.ports.filter(port => port.connected).length)
 const totalRateLabel = computed(() => {
@@ -62,6 +63,21 @@ const handleImportChange = async (event) => {
   } catch (error) {
     notify.error(error?.message || i18n.t('header.notifications.importError'))
     return
+  }
+}
+
+const importLayoutFromUrl = async (initialUrl = defaultOnlineWorkspaceUrl) => {
+  const url = prompt('输入工作区 JSON 地址。可以使用仓库内路径，例如 /examples/workspaces/vitals-dashboard.json', initialUrl)
+  if (!url) return
+
+  const confirmed = confirm(i18n.t('header.confirmImport'))
+  if (!confirmed) return
+
+  try {
+    await store.importWorkspaceConfigFromUrl(url)
+    notify.success(`已在线导入工作区: ${url}`)
+  } catch (error) {
+    notify.error(error?.message || '在线工作区导入失败')
   }
 }
 
@@ -142,6 +158,14 @@ const toggleCanvasBackdropPattern = () => {
             data-ai="import-workspace"
           >
             <FluentEmoji name="fileFolder" :size="16" alt="" /> {{ i18n.t('header.buttons.import') }}
+          </button>
+          <button
+            @click="importLayoutFromUrl()"
+            title="从在线 JSON 地址导入工作区"
+            class="header-action"
+            data-ai="import-workspace-url"
+          >
+            <FluentEmoji name="inboxTray" :size="16" alt="" /> 在线导入
           </button>
           <button @click="confirmClearAll" class="header-action header-action-danger" data-ai="clear-workspace">
             <FluentEmoji name="wastebasket" :size="16" alt="" /> {{ i18n.t('header.buttons.clearAll') }}

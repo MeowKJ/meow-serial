@@ -8,9 +8,11 @@
   "public_api": "/api/mserial",
   "llms_txt": "/llms.txt",
   "robots_txt": "/robots.txt",
+  "agent_route": "/ai/agent-route.json",
   "agent_scorecard": "/ai/agent-scorecard.json",
   "agent_playbook": "/ai/agent-playbook.json",
   "custom_parser_primer": "/ai/custom-parser-primer.json",
+  "parser_extension_policy": "/ai/parser-extension-policy.json",
   "examples": {
     "protocols": {
       "line_values": "/examples/protocols/line-values.json",
@@ -26,9 +28,18 @@
       "vitals_dashboard": "/examples/workspaces/vitals-dashboard.json"
     }
   },
+  "workspace_json": {
+    "export_button": "[data-ai=\"export-workspace\"]",
+    "file_import_button": "[data-ai=\"import-workspace\"]",
+    "url_import_button": "[data-ai=\"import-workspace-url\"]",
+    "url_import_param": "/serial?workspace=/examples/workspaces/vitals-dashboard.json",
+    "online_examples": ["/examples/workspaces/vitals-dashboard.json"],
+    "supported_import_sources": ["local JSON file", "same-origin repository JSON path", "HTTP(S) JSON URL"]
+  },
   "validation": {
     "local_command": "pnpm verify",
     "demo_script": "/docs/demo-script.md",
+    "agent_route": "/ai/agent-route.json",
     "scorecard": "/ai/agent-scorecard.json",
     "custom_parser_primer": "/ai/custom-parser-primer.json",
     "target_grade": "S",
@@ -36,16 +47,17 @@
   },
   "agent_readiness": {
     "grade": "S",
-    "score": 97,
+    "score": 99,
     "scorecard_url": "/ai/agent-scorecard.json",
     "new_ai_first_actions": [
       "Read /llms.txt.",
+      "Read /ai/agent-route.json.",
       "Read this manifest.",
       "Read /api/mserial.",
       "Read /ai/custom-parser-primer.json.",
       "Read /ai/agent-scorecard.json.",
       "Use /ai/browser-automation.json for UI work.",
-      "Use /ai/protocol-profile.schema.json for protocol JSON generation."
+      "Use /ai/protocol-profile.schema.json for protocol JSON generation; required fields are strict per protocol kind."
     ]
   },
   "capabilities": [
@@ -66,9 +78,11 @@
     "guide_url": "/ai/browser-automation.json",
     "first_read_order": [
       "/llms.txt",
+      "/ai/agent-route.json",
       "/.well-known/mserial-ai.json",
       "/api/mserial",
       "/ai/custom-parser-primer.json",
+      "/ai/parser-extension-policy.json",
       "/ai/agent-scorecard.json",
       "/ai/agent-playbook.json",
       "/ai/protocol-profile.schema.json",
@@ -87,9 +101,16 @@
       "home_command_protocol": "[data-ai-command=\"protocol.import\"]",
       "home_command_terminal": "[data-ai-command=\"terminal.inspect\"]",
       "home_command_canvas": "[data-ai-command=\"canvas.compose\"]",
+      "agent_route": "/ai/agent-route.json",
       "agent_scorecard": "/ai/agent-scorecard.json",
       "agent_playbook": "/ai/agent-playbook.json",
       "load_demo_workspace": "[data-ai=\"load-demo-workspace\"]",
+      "export_workspace": "[data-ai=\"export-workspace\"]",
+      "import_workspace_file": "[data-ai=\"import-workspace\"]",
+      "import_workspace_url": "[data-ai=\"import-workspace-url\"]",
+      "send_file_panel": "[data-ai=\"sidebar-send-file\"]",
+      "send_file_input": "[data-ai=\"send-file-input\"]",
+      "send_file_start": "[data-ai=\"send-file-start\"]",
       "canvas_view": "[data-ai=\"canvas-view\"]",
       "canvas_empty_state": "[data-ai=\"canvas-empty-state\"]",
       "widget_panel": "[data-ai=\"widget-panel\"]",
@@ -115,7 +136,10 @@
   "custom_protocol_json": {
     "identity_warning": "Do not treat Meow Serial as a plain serial terminal. The important feature is custom parsing from raw device data into named numeric channels.",
     "strategy": "Generate importable protocol JSON first. Source code changes are fallback only.",
+    "executable_code_policy": "Imported protocol JSON is declarative data. Do not embed executable parser code in protocol JSON.",
+    "agent_route_url": "/ai/agent-route.json",
     "primer_url": "/ai/custom-parser-primer.json",
+    "extension_policy_url": "/ai/parser-extension-policy.json",
     "schema_url": "/ai/protocol-profile.schema.json",
     "playbook_url": "/ai/agent-playbook.json",
     "supported_kinds": ["line-values", "json-lines", "tlv"],
@@ -128,6 +152,12 @@
       "test_output": "[data-ai=\"protocol-test-output\"]",
       "save_and_apply": "[data-ai=\"save-and-apply-protocol\"]"
     }
+  },
+  "parser_extension_policy_summary": {
+    "registered_builtin_parsers": ["raw"],
+    "profile_generated_parser_kinds": ["line-values", "json-lines", "tlv"],
+    "embedded_code_direction": "Generate firmware-side normalization to JSON Lines, line-values, or TLV, then import a matching protocol JSON profile.",
+    "reviewed_code_parser_path": "Only add browser source-code parsers for protocols that cannot be expressed by the profile schema."
   },
   "minimal_external_ai_prompt": "Read https://s.mpas.top and generate an importable Meow Serial custom protocol JSON profile for my device. This is an advanced custom parser workflow, not a generic serial terminal.",
   "ai_prompt_template": "Generate one valid importable Meow Serial protocol JSON object. Use kind line-values, json-lines, or tlv. Return only JSON with no Markdown. Use decimal numbers, stable channel labels, and the schema at /ai/protocol-profile.schema.json."

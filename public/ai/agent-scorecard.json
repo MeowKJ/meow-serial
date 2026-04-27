@@ -5,9 +5,11 @@
   "target_grade": "S",
   "first_read_order": [
     "/llms.txt",
+    "/ai/agent-route.json",
     "/.well-known/mserial-ai.json",
     "/api/mserial",
     "/ai/custom-parser-primer.json",
+    "/ai/parser-extension-policy.json",
     "/ai/agent-scorecard.json",
     "/ai/agent-playbook.json",
     "/ai/protocol-profile.schema.json",
@@ -39,12 +41,14 @@
     {
       "id": "discoverability",
       "weight": 15,
-      "s_requirement": "All canonical AI entry points are listed in /llms.txt, /.well-known/mserial-ai.json, /api/mserial, /ai/custom-parser-primer.json, and this scorecard.",
+      "s_requirement": "All canonical AI entry points are listed in /llms.txt, /ai/agent-route.json, /.well-known/mserial-ai.json, /api/mserial, /ai/custom-parser-primer.json, /ai/parser-extension-policy.json, and this scorecard.",
       "evidence": [
         "/llms.txt",
+        "/ai/agent-route.json",
         "/.well-known/mserial-ai.json",
         "/api/mserial",
         "/ai/custom-parser-primer.json",
+        "/ai/parser-extension-policy.json",
         "/ai/agent-scorecard.json",
         "/ai/agent-playbook.json"
       ]
@@ -104,22 +108,41 @@
     },
     {
       "id": "self_verification",
-      "weight": 10,
+      "weight": 5,
       "s_requirement": "The AI can run or request pnpm verify, compare its result with the public scorecard, and explain remaining uncertainty.",
       "evidence": [
         "pnpm verify",
         "/api/mserial#agentReadiness",
         "/ai/agent-scorecard.json"
       ]
+    },
+    {
+      "id": "workspace_and_file_ops",
+      "weight": 5,
+      "s_requirement": "The AI can export/import global workspace JSON, import repository JSON online, and identify the side-effect boundary before sending files to a connected device.",
+      "evidence": [
+        "[data-ai=\"export-workspace\"]",
+        "[data-ai=\"import-workspace\"]",
+        "[data-ai=\"import-workspace-url\"]",
+        "/serial?workspace=/examples/workspaces/vitals-dashboard.json",
+        "[data-ai=\"sidebar-send-file\"]",
+        "[data-ai=\"send-file-start\"]",
+        "/api/mserial#workspaceJsonContract",
+        "/api/mserial#fileSendContract"
+      ]
     }
   ],
   "s_grade_required_checks": [
     "Fetch every URL in first_read_order.",
+    "Confirm /ai/agent-route.json provides a route from https://s.mpas.top to protocol JSON generation and browser testing.",
     "State that Meow Serial is an advanced custom protocol parser workspace, not a generic serial terminal.",
     "Read /ai/custom-parser-primer.json before explaining the product from only a URL.",
     "Confirm /api/mserial exposes agentReadiness.grade = S.",
     "Confirm /api/mserial exposes customProtocolJsonContract and /ai/agent-playbook.json explains executable browser recipes.",
+    "Confirm /ai/parser-extension-policy.json says imported protocol JSON is declarative and must not contain executable parser code.",
     "Confirm /ai/browser-automation.json exposes selectors for canvas, terminal, protocol, widget panel, and settings panel.",
+    "Confirm /ai/browser-automation.json exposes workspace URL import and line-by-line file-send selectors.",
+    "Confirm /api/mserial exposes workspaceJsonContract and fileSendContract.",
     "Load /serial?tab=canvas and trigger [data-ai=\"load-demo-workspace\"] when browser automation is available.",
     "Confirm a canvas widget selector and terminal log selector exist after demo loading.",
     "Use /ai/protocol-profile.schema.json before generating importable protocol JSON.",
@@ -127,8 +150,8 @@
   ],
   "current_assessment": {
     "grade": "S",
-    "score": 97,
+    "score": 99,
     "assessed_at": "2026-04-27",
-    "reason": "Canonical discovery files, protocol schema, browser selectors, demo workspace, validation command, and failure recovery guidance are all published and machine-readable."
+    "reason": "Canonical discovery files, strict per-kind protocol schema requirements, browser selectors, demo workspace, validation command, and failure recovery guidance are all published and machine-readable."
   }
 }

@@ -3,5 +3,7 @@ Allow: /
 
 # AI-readable entry points for agents that receive only https://s.mpas.top
 AI-Entry-Point: /llms.txt
+AI-Route: /ai/agent-route.json
 AI-Custom-Parser-Primer: /ai/custom-parser-primer.json
+AI-Parser-Extension-Policy: /ai/parser-extension-policy.json
 AI-API-Contract: /api/mserial

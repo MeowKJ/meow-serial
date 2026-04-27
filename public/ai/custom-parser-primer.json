@@ -21,6 +21,11 @@
     ],
     "output_format": "Exactly one valid JSON object when the user wants direct import. No Markdown, no comments, no JavaScript expressions."
   },
+  "route_from_site_root": {
+    "start": "https://s.mpas.top",
+    "machine_readable_route": "/ai/agent-route.json",
+    "instruction": "If the user gives only the site URL, read the route file before deciding what to ask or generate."
+  },
   "mental_model": [
     "Raw serial or WebSocket data enters Meow Serial.",
     "A protocol profile parses raw bytes or lines into snapshots.",
@@ -30,9 +35,11 @@
   ],
   "first_read_order": [
     "/llms.txt",
+    "/ai/agent-route.json",
     "/ai/custom-parser-primer.json",
     "/api/mserial",
     "/ai/agent-playbook.json",
+    "/ai/parser-extension-policy.json",
     "/ai/protocol-profile.schema.json",
     "/ai/browser-automation.json"
   ],
@@ -50,7 +57,9 @@
     {
       "kind": "tlv",
       "choose_when": "Binary packets have a magic word or fixed header, packet length, TLV headers, and numeric values at fixed payload offsets.",
-      "required_understanding": "Choose packet length offsets, endian settings, TLV type/length fields, and mappings from TLV payload offsets to channel labels."
+      "required_understanding": "Choose packet length offsets, endian settings, TLV type/length fields, and mappings from TLV payload offsets to channel labels.",
+      "ti_mmwave_hint": "TI mmWave output commonly uses TLV-style packets, but TLV itself is a general Type-Length-Value pattern.",
+      "ask_for": "For TLV output, ask for magicWordHex, headerSize, packetLengthOffset/type/endian, TLV header layout, tlvLengthIncludesHeader, field offsets, value types, scale, units, and one expected decoded sample."
     }
   ],
   "source_code_parser_boundary": {
@@ -63,6 +72,24 @@
       "the profile schema cannot express the packet structure"
     ],
     "code_guide": "/docs/ai-protocol-guide.md"
+  },
+  "embedded_parser_code_policy": {
+    "summary": "Meow Serial supports AI-assisted embedded-side parsing design, but imported protocol JSON must remain declarative data.",
+    "safe_path": "Generate firmware or embedded code that normalizes device output into JSON Lines, line-values, or simple TLV, then generate a matching Meow Serial protocol JSON profile.",
+    "unsafe_path": "Do not place arbitrary JavaScript, C, or C++ parser code inside an imported protocol JSON profile and expect Meow Serial to execute it.",
+    "details": "/ai/parser-extension-policy.json"
+  },
+  "tlv_binary_quick_answer": {
+    "short_answer": "Yes, Meow Serial can parse TLV-style binary output if the target values are numeric fields at fixed TLV payload offsets.",
+    "definition": "TLV means Type-Length-Value. It is not exclusive to TI, although TI mmWave UART output often uses TLV-style packets.",
+    "read_for_details": "/ai/parser-extension-policy.json#tlv_binary_protocol_support",
+    "minimum_information_needed": [
+      "magic word or fixed header",
+      "packet length field",
+      "TLV type and length field layout",
+      "field offsets and numeric types",
+      "sample hex frame with expected decoded values"
+    ]
   },
   "browser_import_path": {
     "path": "/serial?tab=protocol",

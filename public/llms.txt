@@ -4,10 +4,12 @@ Meow Serial is not just a generic serial terminal. It is an AI-readable custom p
 
 ## AI Entry Points
 
+- AI route from site root: `/ai/agent-route.json`
 - AI manifest: `/.well-known/mserial-ai.json`
 - AI readiness scorecard: `/ai/agent-scorecard.json`
 - AI operation playbook: `/ai/agent-playbook.json`
 - Custom parser primer: `/ai/custom-parser-primer.json`
+- Parser extension policy: `/ai/parser-extension-policy.json`
 - Protocol profile JSON Schema: `/ai/protocol-profile.schema.json`
 - Browser automation guide: `/ai/browser-automation.json`
 - Runtime metadata API: `/api/mserial`
@@ -16,13 +18,15 @@ Meow Serial is not just a generic serial terminal. It is an AI-readable custom p
 
 Use `/ai/agent-scorecard.json` to grade Meow Serial with the S/A/B/C/D rubric. The target grade is S. Use `/ai/agent-playbook.json` when you need exact browser recipes and custom JSON decision rules.
 
-A new AI should not judge the app from screenshots alone and should not treat it as a plain COM monitor. It should read `/ai/custom-parser-primer.json`, the public API contract, and the protocol schema, then use stable `data-ai` selectors when operating the browser. If no hardware is present, load the demo workspace and report browser-tool limitations separately from site readiness.
+A new AI should not judge the app from screenshots alone and should not treat it as a plain COM monitor. It should read `/ai/agent-route.json`, `/ai/custom-parser-primer.json`, the public API contract, and the protocol schema, then use stable `data-ai` selectors when operating the browser. If no hardware is present, load the demo workspace and report browser-tool limitations separately from site readiness.
 
 ## Primary AI Task
 
 When a user gives an AI a device manual, sample serial frames, field table, or protocol description, the AI should generate one importable Meow Serial protocol JSON profile.
 
 If the user only gives the URL `https://s.mpas.top`, infer that the user wants the AI to learn Meow Serial's custom parser workflow from the site itself. Read `/ai/custom-parser-primer.json` before answering.
+
+For the full zero-prompt route from the site root, read `/ai/agent-route.json`.
 
 The protocol profile must use one of these `kind` values:
 
@@ -33,6 +37,22 @@ The protocol profile must use one of these `kind` values:
 Return plain valid JSON when the user wants to import directly. Do not wrap direct-import JSON in Markdown.
 
 Read `/ai/agent-playbook.json` for the decision tree that maps device data formats to `line-values`, `json-lines`, or `tlv`.
+
+## Parser Code Boundary
+
+Protocol JSON is declarative data, not executable code. Do not embed JavaScript, C, or C++ parser code inside a protocol JSON profile.
+
+If embedded firmware can be changed, the preferred path is to make the device output JSON Lines, line-values, or a simple TLV frame, then generate a matching Meow Serial protocol JSON profile. Read `/ai/parser-extension-policy.json` before recommending source-code parser changes.
+
+## TLV Binary Output
+
+TLV means Type-Length-Value. It is a general binary encoding pattern, not a TI-only protocol. TI mmWave UART output commonly uses TLV-style packets.
+
+Meow Serial can parse TLV-style output when target values are numeric fields at fixed TLV payload offsets.
+
+For a TLV device, ask for: magic word, header size, packet length field, TLV count field or absence, TLV type/length layout, whether TLV length includes its header, each field's TLV type and payload offset, numeric value type, endian, scale, unit, and one sample hex frame with expected decoded values.
+
+If the output uses checksum-only framing, byte stuffing, compressed arrays, bitfields, variable offsets, or cross-packet calculations, prefer firmware-side normalization to JSON Lines/line-values/simple TLV or add a reviewed source-code parser.
 
 ## Minimal Import Workflow
 
@@ -46,6 +66,14 @@ Read `/ai/agent-playbook.json` for the decision tree that maps device data forma
 ## No-Hardware Validation
 
 If physical serial hardware is unavailable, open `/serial?tab=canvas` and trigger `[data-ai="load-demo-workspace"]`. Then verify that chart widgets, finite channel values, and terminal logs are present.
+
+## Workspace JSON and File Send
+
+Global workspace JSON can be exported with `[data-ai="export-workspace"]`, imported from a local file with `[data-ai="import-workspace"]`, or imported from an online JSON URL with `[data-ai="import-workspace-url"]`.
+
+Repository-hosted workspace JSON can be loaded directly with `/serial?workspace=/examples/workspaces/vitals-dashboard.json`.
+
+The file sender is line-by-line and uses `[data-ai="sidebar-send-file"]`, `[data-ai="send-file-port-select"]`, `[data-ai="send-file-delay-ms"]`, `[data-ai="send-file-input"]`, and `[data-ai="send-file-start"]`. Sending data to a connected device is side-effectful; confirm user intent before starting.
 
 ## Important Notes
 

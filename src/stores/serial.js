@@ -6,6 +6,7 @@ import {
   getLayoutList,
   loadLayout,
   loadWorkspace,
+  readJsonFromUrl,
   readJsonFile,
   saveLayout,
   saveWorkspace
@@ -429,6 +430,23 @@ export const useSerialStore = defineStore('serial', () => {
     return snapshot
   }
 
+  const importWorkspaceConfigFromUrl = async (url) => {
+    const config = await readJsonFromUrl(url)
+    const snapshot = extractWorkspaceSnapshot(config)
+
+    if (!snapshot) {
+      throw new Error('在线 JSON 不是可识别的全局配置')
+    }
+
+    const applied = applyWorkspaceSnapshot(snapshot)
+    if (!applied) {
+      throw new Error('在线全局配置导入失败')
+    }
+
+    saveWorkspaceState()
+    return snapshot
+  }
+
   const loadNamedLayout = (name) => {
     if (!name) return false
     const snapshot = loadLayout(name)
@@ -578,6 +596,7 @@ export const useSerialStore = defineStore('serial', () => {
     applyWorkspaceSnapshot,
     exportWorkspaceConfig,
     importWorkspaceConfig,
+    importWorkspaceConfigFromUrl,
     saveWorkspaceState,
     loadWorkspaceState,
     saveNamedLayout,

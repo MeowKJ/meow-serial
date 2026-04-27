@@ -9,8 +9,10 @@ const metadata = {
   aiEndpoints: [
     '/llms.txt',
     '/robots.txt',
+    '/ai/agent-route.json',
     '/.well-known/mserial-ai.json',
     '/ai/custom-parser-primer.json',
+    '/ai/parser-extension-policy.json',
     '/ai/agent-scorecard.json',
     '/ai/agent-playbook.json',
     '/ai/protocol-profile.schema.json',
@@ -20,9 +22,11 @@ const metadata = {
   aiDiscovery: {
     firstReadOrder: [
       '/llms.txt',
+      '/ai/agent-route.json',
       '/.well-known/mserial-ai.json',
       '/api/mserial',
       '/ai/custom-parser-primer.json',
+      '/ai/parser-extension-policy.json',
       '/ai/agent-scorecard.json',
       '/ai/agent-playbook.json',
       '/ai/protocol-profile.schema.json',
@@ -30,9 +34,11 @@ const metadata = {
     ],
     endpointDescriptions: {
       '/llms.txt': 'Short natural-language orientation for a new language model.',
+      '/ai/agent-route.json': 'Shortest machine-readable route for an AI that starts only from https://s.mpas.top.',
       '/.well-known/mserial-ai.json': 'Stable manifest with capabilities, prompt template, and selector summary.',
       '/api/mserial': 'Runtime metadata, command IDs, layout contract, and supported protocol kinds.',
       '/ai/custom-parser-primer.json': 'First-stop primer that tells new AI agents this is a custom protocol parser workflow, not a generic serial terminal.',
+      '/ai/parser-extension-policy.json': 'Machine-readable policy for protocol JSON, embedded-side normalization code, and reviewed parser modules.',
       '/ai/agent-scorecard.json': 'Machine-readable S/A/B/C/D rubric and self-verification checklist for new AI agents.',
       '/ai/agent-playbook.json': 'Executable new-agent playbook connecting docs, protocol JSON generation, browser selectors, and success signals.',
       '/ai/protocol-profile.schema.json': 'JSON Schema for generating directly importable protocol profiles.',
@@ -81,6 +87,15 @@ const metadata = {
       precondition: 'At least one parsed channel exists, or examples/workspaces/vitals-dashboard.json is imported.',
       successSignal: '[data-ai="serial-app"] shows canvas widgets and channel values update in the sidebar.',
       description: '把解析后的命名通道绑定到实时控件。'
+    },
+    {
+      id: 'workspace.importUrl',
+      label: '在线导入工作区 JSON',
+      target: '/serial?workspace=/examples/workspaces/vitals-dashboard.json',
+      selector: '[data-ai="import-workspace-url"]',
+      precondition: 'Have a workspace JSON URL. Repository examples can use /examples/workspaces/vitals-dashboard.json.',
+      successSignal: '[data-ai^="canvas-widget-"] exists after the workspace JSON is loaded.',
+      description: '从仓库 JSON 路径或 HTTP(S) 地址导入完整工作区。'
     }
   ],
   examples: {
@@ -100,16 +115,21 @@ const metadata = {
   },
   validationHints: {
     localCommand: 'pnpm verify',
+    agentRoute: '/ai/agent-route.json',
     scorecard: '/ai/agent-scorecard.json',
     playbook: '/ai/agent-playbook.json',
     targetGrade: 'S',
     protocolKinds: ['line-values', 'json-lines', 'tlv'],
+    registeredBuiltinParsers: ['raw'],
+    extensionPolicy: '/ai/parser-extension-policy.json',
     successSignals: {
       homeReady: '[data-ai="home-view"] is visible and [data-ai-command] links exist.',
       protocolView: '[data-ai="protocol-view"] is visible after opening /serial?tab=protocol.',
       protocolTestOutput: '[data-ai="protocol-test-output"] contains expected labels such as hr, spo2, bpm, or confidence.',
       terminalActivity: '[data-ai="terminal-log"] contains RX/TX entries after data is received or sent.',
-      canvasActivity: 'Canvas widgets render and sidebar channel values are finite numbers.'
+      canvasActivity: 'Canvas widgets render and sidebar channel values are finite numbers.',
+      workspaceUrlImport: 'Opening /serial?workspace=/examples/workspaces/vitals-dashboard.json or using [data-ai="import-workspace-url"] loads visible canvas widgets.',
+      fileSend: '[data-ai="terminal-log"] contains TX rows and a file-send completion system log after [data-ai="send-file-start"].'
     },
     failureChecks: [
       'If Web Serial is unavailable, use WebSocket sources for demo and validation.',
@@ -119,24 +139,28 @@ const metadata = {
   },
   agentReadiness: {
     grade: 'S',
-    score: 97,
+    score: 99,
     scorecardUrl: '/ai/agent-scorecard.json',
     requiredFirstActions: [
       'Read /llms.txt and /.well-known/mserial-ai.json.',
+      'Read /ai/agent-route.json for the shortest route from https://s.mpas.top.',
       'Read /api/mserial and confirm agentReadiness.grade is S.',
       'Read /ai/custom-parser-primer.json before describing the product.',
       'Read /ai/agent-scorecard.json before judging AI-friendliness.',
       'Read /ai/agent-playbook.json before operating the browser UI.',
       'Use /ai/browser-automation.json selectors for browser work.',
-      'Use /ai/protocol-profile.schema.json before generating protocol JSON.',
+      'Use /ai/protocol-profile.schema.json before generating protocol JSON; required fields are strict per protocol kind.',
+      'Use [data-ai="import-workspace-url"] or /serial?workspace=/examples/workspaces/vitals-dashboard.json when importing repository workspace JSON online.',
       'Load demo workspace when hardware is absent.'
     ],
     downgradeRule: 'If browser automation is unavailable, report the browser limitation separately instead of lowering the documented API contract without evidence.',
     sEvidence: [
       '/llms.txt',
+      '/ai/agent-route.json',
       '/.well-known/mserial-ai.json',
       '/api/mserial',
       '/ai/custom-parser-primer.json',
+      '/ai/parser-extension-policy.json',
       '/ai/agent-scorecard.json',
       '/ai/agent-playbook.json',
       '/ai/protocol-profile.schema.json',
@@ -194,6 +218,15 @@ const metadata = {
       outcome: 'Open the dashboard canvas for human-facing live charts.'
     },
     {
+      id: 'workspace.importUrl',
+      href: '/serial?workspace=/examples/workspaces/vitals-dashboard.json',
+      homeSelector: '[data-ai="import-workspace-url"]',
+      expectedUrl: '/serial?workspace=/examples/workspaces/vitals-dashboard.json',
+      precondition: 'Use a workspace JSON URL or repository JSON path.',
+      successSignal: '[data-ai^="canvas-widget-"] exists after online import.',
+      outcome: 'Import full workspace JSON from the deployed repository without a local file upload.'
+    },
+    {
       id: 'api.describe',
       href: '/api/mserial',
       homeSelector: '[data-ai-command="api.describe"]',
@@ -223,7 +256,10 @@ const metadata = {
   customProtocolJsonContract: {
     identityWarning: 'The custom parser is the core feature: raw serial/WebSocket bytes become protocol snapshots, named channels, and dashboard widgets.',
     defaultStrategy: 'Generate importable protocol JSON first; edit source code only when the schema cannot express the protocol.',
+    executableCodePolicy: 'Imported protocol JSON is declarative data. Do not execute arbitrary JavaScript/C/C++ parser code from JSON.',
+    agentRouteUrl: '/ai/agent-route.json',
     primerUrl: '/ai/custom-parser-primer.json',
+    extensionPolicyUrl: '/ai/parser-extension-policy.json',
     schemaUrl: '/ai/protocol-profile.schema.json',
     playbookUrl: '/ai/agent-playbook.json',
     supportedKinds: ['line-values', 'json-lines', 'tlv'],
@@ -239,10 +275,62 @@ const metadata = {
     directImportRules: [
       'Return exactly one valid JSON object.',
       'Do not wrap direct-import JSON in Markdown.',
+      'Do not embed executable parser code in protocol JSON.',
       'Use decimal numbers for offsets, type IDs, baud rates, and scales.',
       'Use spaced uppercase hex for magicWordHex.',
       'Use stable channel labels because they become widget channel names.'
     ]
+  },
+  workspaceJsonContract: {
+    scope: 'Global workspace JSON stores ports, protocol profiles, channels, widgets, canvas settings, theme, and UI language.',
+    exportButton: '[data-ai="export-workspace"]',
+    fileImportButton: '[data-ai="import-workspace"]',
+    urlImportButton: '[data-ai="import-workspace-url"]',
+    urlImportParam: '/serial?workspace=/examples/workspaces/vitals-dashboard.json',
+    onlineExamples: ['/examples/workspaces/vitals-dashboard.json'],
+    supportedImportSources: ['local JSON file', 'same-origin repository JSON path', 'HTTP(S) JSON URL'],
+    successSignal: '[data-ai^="canvas-widget-"] exists and sidebar channels show finite values.'
+  },
+  fileSendContract: {
+    scope: 'Send text-like files line by line to a connected serial or WebSocket port.',
+    selectors: {
+      panel: '[data-ai="sidebar-send-file"]',
+      portSelect: '[data-ai="send-file-port-select"]',
+      delayMs: '[data-ai="send-file-delay-ms"]',
+      fileInput: '[data-ai="send-file-input"]',
+      startButton: '[data-ai="send-file-start"]'
+    },
+    supportedExtensions: ['.txt', '.cfg', '.csv'],
+    defaultDelayMs: 80,
+    skippedCommentPrefixes: ['#', '%'],
+    safetyRule: 'Only send files after the user clearly intends to transmit data to the selected connected device.'
+  },
+  parserExtensionPolicy: {
+    currentRuntime: {
+      registeredBuiltinParsers: ['raw'],
+      profileGeneratedParserKinds: ['line-values', 'json-lines', 'tlv']
+    },
+    embeddedCodeDirection: 'Supported as firmware-side normalization outputting JSON Lines, line-values, or simple TLV; not as arbitrary code embedded in imported JSON.',
+    reviewedCodeParserPath: 'For complex protocols, add a source-code parser module and register it in src/parsers/index.js.',
+    policyUrl: '/ai/parser-extension-policy.json',
+    tlvBinarySupport: {
+      definition: 'TLV means Type-Length-Value. It is a general binary encoding pattern; TI mmWave UART output commonly uses TLV-style packets.',
+      canParseWhen: 'Target values are numeric fields at fixed TLV payload offsets inside packets with readable length and TLV headers.',
+      askFor: [
+        'magicWordHex',
+        'headerSize',
+        'packetLengthOffset/type/endian',
+        'tlvCountOffset/type/endian or -1 if absent',
+        'tlvHeaderSize',
+        'tlvTypeOffset/type',
+        'tlvLengthOffset/type',
+        'tlvHeaderEndian',
+        'tlvLengthIncludesHeader',
+        'field label/tlvType/valueOffset/valueType/endian/scale/unit',
+        'sample hex frame and expected decoded values'
+      ],
+      fallback: 'Use firmware-side normalization or a reviewed source-code parser when values are variable-offset, compressed, checksum-gated, byte-stuffed, or derived across packets.'
+    }
   }
 }
 

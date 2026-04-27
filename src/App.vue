@@ -263,9 +263,25 @@ const loadDemoWorkspace = async () => {
   }
 }
 
+const importWorkspaceFromQuery = async () => {
+  const params = new URLSearchParams(window.location.search)
+  const workspaceUrl = params.get('workspace') || params.get('workspaceUrl')
+  if (!workspaceUrl) return
+
+  try {
+    await store.importWorkspaceConfigFromUrl(workspaceUrl)
+    store.saveWorkspaceState()
+    activeTab.value = 'canvas'
+    notify.success(`已从 URL 导入工作区: ${workspaceUrl}`)
+  } catch (error) {
+    notify.error(error?.message || 'URL 工作区导入失败')
+  }
+}
+
 // 全局点击关闭菜单
 onMounted(() => {
   document.addEventListener('click', closeContextMenu)
+  importWorkspaceFromQuery()
 })
 </script>
 

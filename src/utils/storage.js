@@ -183,6 +183,41 @@ export const readJsonFile = (file) => {
   })
 }
 
+export const normalizeJsonImportUrl = (input) => {
+  const value = String(input || '').trim()
+  if (!value) {
+    throw new Error('请输入 JSON 地址')
+  }
+
+  const url = new URL(value, window.location.origin)
+
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('只支持 HTTP/HTTPS JSON 地址')
+  }
+
+  return url.toString()
+}
+
+export const readJsonFromUrl = async (input) => {
+  const url = normalizeJsonImportUrl(input)
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json, text/json, */*'
+    },
+    credentials: url.startsWith(window.location.origin) ? 'same-origin' : 'omit'
+  })
+
+  if (!response.ok) {
+    throw new Error(`在线 JSON 加载失败: HTTP ${response.status}`)
+  }
+
+  try {
+    return await response.json()
+  } catch {
+    throw new Error('在线内容不是合法 JSON')
+  }
+}
+
 export const extractWorkspaceSnapshot = (config) => {
   if (config?.kind === WORKSPACE_EXPORT_KIND && looksLikeWorkspaceSnapshot(config.workspace)) {
     return config.workspace

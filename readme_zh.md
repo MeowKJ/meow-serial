@@ -5,7 +5,7 @@
 ![Version](https://img.shields.io/badge/version-2.0.0-ffb3c7)
 ![Vue](https://img.shields.io/badge/Vue-3.4-42b883)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff)
-![License](https://img.shields.io/badge/license-MIT-8bd3dd)
+![License](https://img.shields.io/badge/license-AGPL--3.0--only-8bd3dd)
 
 ## 项目定位
 
@@ -47,6 +47,8 @@ Meow Serial 是一个基于浏览器的串口调试工具，也支持 WebSocket 
 - 协议 JSON 导入 / 导出
 - 协议测试输入框
 - 解析字段自动变成全局通道
+
+当前真正注册的基础内置解析器只有 `raw`。`line-values`、`json-lines`、`tlv` 是由协议 JSON 动态生成的解析器类型。协议 JSON 是声明式配置，不应嵌入 JavaScript、C 或 C++ 可执行解析代码。复杂协议更推荐让嵌入式侧输出 JSON Lines、数值行或简单 TLV，再由 Meow Serial 解析。
 
 ### 画布看板
 
@@ -104,19 +106,31 @@ AI 应优先生成协议 JSON，而不是直接改源码。只有协议无法用
 
 ```text
 /llms.txt
+/ai/agent-route.json
 /.well-known/mserial-ai.json
+/ai/custom-parser-primer.json
+/ai/parser-extension-policy.json
+/ai/agent-scorecard.json
+/ai/agent-playbook.json
 /ai/protocol-profile.schema.json
 /ai/browser-automation.json
 /api/mserial
+/robots.txt
 ```
 
 这些文件的用途：
 
 - `/llms.txt`：给 AI 阅读的项目简介和推荐流程
+- `/ai/agent-route.json`：从 `https://s.mpas.top` 出发的新 AI 指引路线
 - `/.well-known/mserial-ai.json`：机器可读的能力清单、schema 地址和自动化入口
+- `/ai/custom-parser-primer.json`：自定义解析器入门
+- `/ai/parser-extension-policy.json`：解析器扩展策略
+- `/ai/agent-scorecard.json`：AI 友好度评分标准
+- `/ai/agent-playbook.json`：AI 实际操作剧本
 - `/ai/protocol-profile.schema.json`：可导入协议 JSON 的 JSON Schema
 - `/ai/browser-automation.json`：浏览器自动化选择器说明
 - `/api/mserial`：Next.js API Route，返回项目能力、入口和协议类型元数据
+- `/robots.txt`：声明 AI 可抓取的公开入口
 
 给 AI 的一句话任务模板：
 
@@ -254,6 +268,25 @@ AI 应优先生成协议 JSON，而不是直接改源码。只有协议无法用
 [data-ai="export-protocol-json"]      导出协议 JSON
 ```
 
+全局工作区和文件发送选择器：
+
+```text
+[data-ai="export-workspace"]          导出完整工作区 JSON
+[data-ai="import-workspace"]          从本地文件导入工作区 JSON
+[data-ai="import-workspace-url"]      从在线 URL 导入工作区 JSON
+[data-ai="sidebar-send-file"]         文件发送面板
+[data-ai="send-file-port-select"]     文件发送目标端口
+[data-ai="send-file-delay-ms"]        文件发送逐行间隔
+[data-ai="send-file-input"]           文件选择输入
+[data-ai="send-file-start"]           开始逐行发送文件
+```
+
+在线工作区导入支持仓库内 JSON 路径和 HTTP(S) JSON，例如：
+
+```text
+/serial?workspace=/examples/workspaces/vitals-dashboard.json
+```
+
 完整选择器表见：
 
 - [docs/ai-public-api.md](docs/ai-public-api.md)
@@ -290,6 +323,8 @@ pnpm dev
 
 顶部栏可以导出完整工作区 JSON。它会保存端口、协议、控件、布局、主题和语言设置。
 
+也可以从在线 JSON 导入完整工作区。顶部栏点击 `在线导入` 后输入 `/examples/workspaces/vitals-dashboard.json`，或直接打开 `/serial?workspace=/examples/workspaces/vitals-dashboard.json`。
+
 ## 开发说明
 
 ### 环境要求
@@ -324,8 +359,14 @@ public/
 ├── images/
 │   └── ai-protocol-workflow.png
 ├── llms.txt
+├── robots.txt
 ├── .well-known/mserial-ai.json
 └── ai/
+    ├── agent-route.json
+    ├── custom-parser-primer.json
+    ├── parser-extension-policy.json
+    ├── agent-scorecard.json
+    ├── agent-playbook.json
     ├── protocol-profile.schema.json
     └── browser-automation.json
 
@@ -336,6 +377,8 @@ app/
 └── api/mserial/route.js  # 动态 API Route
 
 docs/
+├── ai-agent-route.md
+├── ai-scorecard.md
 ├── ai-protocol-guide.md
 └── ai-public-api.md
 ```
@@ -362,7 +405,9 @@ docs/
 
 ## 许可证
 
-MIT
+AGPL-3.0-only。详见 [LICENSE](LICENSE)。
+
+这意味着你可以使用、学习、修改和分发本项目；如果你修改后作为网络服务提供，也需要按 AGPL-3.0-only 向服务用户提供对应源码。
 
 ---
 

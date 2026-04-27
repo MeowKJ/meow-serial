@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0",
+  "name": "Meow Serial AI Route From s.mpas.top",
+  "canonical_start_url": "https://s.mpas.top",
+  "purpose": "A shortest-path guide for a new AI that receives only the site URL and must understand, generate, test, and explain Meow Serial protocol JSON.",
+  "route_principle": "Start from the public website, discover machine-readable AI files, identify the protocol shape, generate declarative protocol JSON, test it in the Protocol page, and only then recommend source-code parser work.",
+  "zero_prompt_mode": {
+    "user_can_say": "https://s.mpas.top",
+    "ai_should_infer": [
+      "This is not a generic serial terminal.",
+      "The primary task is custom protocol parsing through importable JSON profiles.",
+      "The AI should read the public AI routes before asking the user for protocol details.",
+      "The AI should output direct-import JSON only when enough protocol information is available."
+    ]
+  },
+  "route": [
+    {
+      "step": 1,
+      "name": "Open the site root",
+      "read": "https://s.mpas.top",
+      "goal": "Find visible product identity and AI links.",
+      "expected_signal": "The page describes Meow Serial as a custom protocol parser workspace."
+    },
+    {
+      "step": 2,
+      "name": "Read natural-language AI overview",
+      "read": "https://s.mpas.top/llms.txt",
+      "goal": "Learn the core task, protocol kinds, and safety boundary.",
+      "expected_signal": "The file says Meow Serial is not a generic serial terminal and points to protocol JSON."
+    },
+    {
+      "step": 3,
+      "name": "Read machine manifest",
+      "read": "https://s.mpas.top/.well-known/mserial-ai.json",
+      "goal": "Collect stable endpoints, selector maps, examples, and prompt templates.",
+      "expected_signal": "The manifest exposes custom_protocol_json, protocol_profile, and browser_automation."
+    },
+    {
+      "step": 4,
+      "name": "Read runtime API",
+      "read": "https://s.mpas.top/api/mserial",
+      "goal": "Confirm current runtime capabilities and the canonical command surface.",
+      "expected_signal": "agentReadiness.grade is S and customProtocolJsonContract is present."
+    },
+    {
+      "step": 5,
+      "name": "Read custom parser primer",
+      "read": "https://s.mpas.top/ai/custom-parser-primer.json",
+      "goal": "Avoid misclassifying the app and decide whether the user's data can be a protocol profile.",
+      "expected_signal": "The AI can explain line-values, json-lines, and tlv."
+    },
+    {
+      "step": 6,
+      "name": "Read extension policy",
+      "read": "https://s.mpas.top/ai/parser-extension-policy.json",
+      "goal": "Keep protocol JSON declarative and decide when embedded-side normalization or reviewed source parser code is needed.",
+      "expected_signal": "The AI refuses to embed executable parser code inside protocol JSON."
+    },
+    {
+      "step": 7,
+      "name": "Read protocol schema",
+      "read": "https://s.mpas.top/ai/protocol-profile.schema.json",
+      "goal": "Generate a direct-import JSON object that matches Meow Serial's profile shape.",
+      "expected_signal": "The generated profile uses kind line-values, json-lines, or tlv."
+    },
+    {
+      "step": 8,
+      "name": "Read browser automation guide",
+      "read": "https://s.mpas.top/ai/browser-automation.json",
+      "goal": "Operate the site with data-ai selectors instead of localized visible text.",
+      "expected_signal": "The AI knows how to open /serial?tab=protocol and read protocol-test-output."
+    },
+    {
+      "step": 9,
+      "name": "Use the operation playbook",
+      "read": "https://s.mpas.top/ai/agent-playbook.json",
+      "goal": "Execute the import/test/save route or report missing information.",
+      "expected_signal": "The AI can either test a sample or ask the user for the missing protocol fields."
+    }
+  ],
+  "protocol_json_generation_route": {
+    "decision_order": [
+      {
+        "kind": "line-values",
+        "choose_when": "Records are text lines with separated numeric values.",
+        "must_ask_for": ["separator", "channel labels", "sample line", "baud rate"]
+      },
+      {
+        "kind": "json-lines",
+        "choose_when": "Records are one JSON object per line.",
+        "must_ask_for": ["field paths", "sample JSON line", "baud rate"]
+      },
+      {
+        "kind": "tlv",
+        "choose_when": "Packets have readable packet length and TLV type/length headers, with target values at fixed payload offsets.",
+        "must_ask_for": [
+          "magicWordHex or fixed header",
+          "headerSize",
+          "packetLengthOffset/type/endian",
+          "tlvCountOffset/type/endian or -1 if absent",
+          "tlvHeaderSize",
+          "tlvTypeOffset/type",
+          "tlvLengthOffset/type",
+          "tlvHeaderEndian",
+          "tlvLengthIncludesHeader",
+          "field label/tlvType/valueOffset/valueType/endian/scale/unit",
+          "sample hex frame and expected decoded values"
+        ]
+      }
+    ],
+    "output_rules": [
+      "Return exactly one JSON object for direct import.",
+      "Do not wrap direct-import JSON in Markdown.",
+      "Do not include comments.",
+      "Do not include executable parser code.",
+      "Use decimal numbers, not JavaScript expressions.",
+      "Use stable channel labels because they become dashboard channel names."
+    ]
+  },
+  "browser_operation_route": {
+    "path": "https://s.mpas.top/serial?tab=protocol",
+    "selectors": {
+      "view": "[data-ai=\"protocol-view\"]",
+      "import_button": "[data-ai=\"import-protocol-json\"]",
+      "file_input": "[data-ai=\"protocol-json-file-input\"]",
+      "test_input": "[data-ai=\"protocol-test-input\"]",
+      "test_button": "[data-ai=\"test-protocol\"]",
+      "test_output": "[data-ai=\"protocol-test-output\"]",
+      "save_and_apply": "[data-ai=\"save-and-apply-protocol\"]"
+    },
+    "success_signal": "protocol-test-output contains expected labels and finite numeric values."
+  },
+  "workspace_json_route": {
+    "export_selector": "[data-ai=\"export-workspace\"]",
+    "file_import_selector": "[data-ai=\"import-workspace\"]",
+    "url_import_selector": "[data-ai=\"import-workspace-url\"]",
+    "repository_example_url": "https://s.mpas.top/examples/workspaces/vitals-dashboard.json",
+    "direct_import_path": "https://s.mpas.top/serial?workspace=/examples/workspaces/vitals-dashboard.json",
+    "success_signal": "[data-ai^=\"canvas-widget-\"] exists and sidebar channels show finite values."
+  },
+  "file_send_route": {
+    "path": "https://s.mpas.top/serial?tab=terminal",
+    "selectors": {
+      "panel": "[data-ai=\"sidebar-send-file\"]",
+      "port_select": "[data-ai=\"send-file-port-select\"]",
+      "delay_ms": "[data-ai=\"send-file-delay-ms\"]",
+      "file_input": "[data-ai=\"send-file-input\"]",
+      "start": "[data-ai=\"send-file-start\"]"
+    },
+    "safety_rule": "Sending a file writes to the selected connected device; confirm user intent before starting."
+  },
+  "fallbacks": [
+    {
+      "condition": "The user has no hardware connected.",
+      "action": "Open https://s.mpas.top/serial?tab=canvas and trigger [data-ai=\"load-demo-workspace\"]."
+    },
+    {
+      "condition": "The protocol needs checksum, byte stuffing, variable offsets, compression, arrays, matrices, bitfields, or cross-packet calculations.",
+      "action": "Recommend firmware-side normalization to JSON Lines/line-values/simple TLV, or a reviewed source-code parser module."
+    },
+    {
+      "condition": "The AI cannot use browser automation.",
+      "action": "Report the browser limitation honestly and still generate/test protocol JSON mentally against the schema and examples."
+    }
+  ],
+  "short_answer_template": "I will read https://s.mpas.top, identify the protocol shape, generate a declarative Meow Serial protocol JSON profile, and test it through /serial?tab=protocol. If the protocol cannot fit line-values/json-lines/tlv, I will recommend embedded-side normalization or a reviewed source parser instead."
+}

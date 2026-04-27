@@ -2,6 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "/ai/protocol-profile.schema.json",
   "title": "Meow Serial Protocol Profile",
+  "description": "Direct-import schema for Meow Serial protocol JSON. If an AI starts from https://s.mpas.top, read /ai/agent-route.json before generating this JSON.",
+  "$comment": "AI route: /ai/agent-route.json. Protocol JSON is declarative data; do not embed executable parser code.",
+  "x-ai-route": "/ai/agent-route.json",
+  "x-ai-output-rule": "Return exactly one JSON object for direct import. No Markdown, comments, or executable code.",
   "type": "object",
   "additionalProperties": true,
   "required": ["name", "kind", "defaultBaudRate"],
@@ -38,6 +42,7 @@
     "line": {
       "type": "object",
       "additionalProperties": true,
+      "required": ["channelNames"],
       "properties": {
         "separatorPattern": {
           "type": "string",
@@ -45,16 +50,19 @@
         },
         "channelNames": {
           "type": "array",
-          "items": { "type": "string" }
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
         }
       }
     },
     "json": {
       "type": "object",
       "additionalProperties": true,
+      "required": ["fieldPaths"],
       "properties": {
         "fieldPaths": {
           "type": "array",
+          "minItems": 1,
           "items": { "type": "string" },
           "description": "Dotted numeric field paths. Empty means all top-level numeric fields."
         }
@@ -63,6 +71,23 @@
     "tlv": {
       "type": "object",
       "additionalProperties": true,
+      "required": [
+        "headerSize",
+        "packetLengthOffset",
+        "packetLengthType",
+        "packetLengthEndian",
+        "tlvCountOffset",
+        "tlvCountType",
+        "tlvCountEndian",
+        "tlvHeaderSize",
+        "tlvTypeOffset",
+        "tlvTypeType",
+        "tlvLengthOffset",
+        "tlvLengthType",
+        "tlvHeaderEndian",
+        "tlvLengthIncludesHeader",
+        "mappings"
+      ],
       "properties": {
         "magicWordHex": { "type": "string" },
         "headerSize": { "type": "number", "minimum": 8 },
@@ -81,6 +106,7 @@
         "tlvLengthIncludesHeader": { "type": "boolean" },
         "mappings": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
             "additionalProperties": true,

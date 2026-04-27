@@ -2,9 +2,11 @@ import { getFluentEmojiUrl } from '@meowkj/fluent-emoji-assets'
 
 const endpoints = [
   { label: 'LLM 入口', value: '/llms.txt' },
+  { label: 'AI 指引路线', value: '/ai/agent-route.json' },
   { label: '站点 Manifest', value: '/.well-known/mserial-ai.json' },
   { label: '能力清单', value: '/api/mserial' },
   { label: '自定义解析器入门', value: '/ai/custom-parser-primer.json' },
+  { label: '解析器扩展策略', value: '/ai/parser-extension-policy.json' },
   { label: '协议 Schema', value: '/ai/protocol-profile.schema.json' },
   { label: '操作剧本', value: '/ai/agent-playbook.json' },
   { label: '浏览器自动化', value: '/ai/browser-automation.json' }

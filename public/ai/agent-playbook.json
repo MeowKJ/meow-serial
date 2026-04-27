@@ -11,31 +11,41 @@
     },
     {
       "order": 2,
+      "read": "/ai/agent-route.json",
+      "why": "Follow the shortest route when the user gives only https://s.mpas.top."
+    },
+    {
+      "order": 3,
       "read": "/.well-known/mserial-ai.json",
       "why": "Get app capabilities, public paths, scorecard URL, and stable selector summary."
     },
     {
-      "order": 3,
+      "order": 4,
       "read": "/ai/custom-parser-primer.json",
       "why": "Understand that Meow Serial is a custom parser workflow, not a plain serial monitor."
     },
     {
-      "order": 4,
+      "order": 5,
       "read": "/api/mserial",
       "why": "Get runtime command IDs, examples, validation hints, and agentReadiness."
     },
     {
-      "order": 5,
+      "order": 6,
       "read": "/ai/agent-scorecard.json",
       "why": "Know the S/A/B/C/D rubric before scoring."
     },
     {
-      "order": 6,
+      "order": 7,
+      "read": "/ai/parser-extension-policy.json",
+      "why": "Understand why protocol JSON is declarative and how embedded-side parser code should be handled."
+    },
+    {
+      "order": 8,
       "read": "/ai/protocol-profile.schema.json",
       "why": "Generate custom JSON that can be imported directly."
     },
     {
-      "order": 7,
+      "order": 9,
       "read": "/ai/browser-automation.json",
       "why": "Operate the UI using data-ai selectors."
     }
@@ -102,8 +112,42 @@
     "Put units in unit fields, never inside numeric values.",
     "Use spaced uppercase hex for magicWordHex.",
     "Use stable channel labels because they become dashboard channel names.",
+    "Do not include executable JavaScript, C, or C++ parser code inside importable protocol JSON.",
     "Validate mentally against /ai/protocol-profile.schema.json before returning."
   ],
+  "embedded_parser_code_guidance": {
+    "answer": "Supported as a design direction, but not by executing code embedded inside protocol JSON.",
+    "recommended_path": "If firmware can be changed, generate embedded code that emits JSON Lines, line-values, or simple TLV. Then generate a matching Meow Serial protocol profile.",
+    "repo_code_path": "If the browser must parse a complex binary stream, add a reviewed source-code parser module and register it. Use /ai/parser-extension-policy.json before choosing this path."
+  },
+  "tlv_binary_recipe": {
+    "trigger_terms": [
+      "TLV",
+      "Type-Length-Value",
+      "TI mmWave",
+      "mmWave UART",
+      "radar TLV",
+      "vitals TLV",
+      "binary TLV"
+    ],
+    "definition": "TLV means Type-Length-Value. It is a general binary structure; TI mmWave is a common TLV-style serial output, not the owner of the concept.",
+    "first_answer": "Meow Serial can parse this if it is fixed-offset TLV. I need the TLV packet layout and one sample frame.",
+    "ask_for": [
+      "magicWordHex",
+      "headerSize",
+      "packetLengthOffset, packetLengthType, packetLengthEndian",
+      "tlvCountOffset or -1 if absent",
+      "tlvHeaderSize",
+      "tlvTypeOffset, tlvTypeType",
+      "tlvLengthOffset, tlvLengthType",
+      "tlvHeaderEndian",
+      "tlvLengthIncludesHeader",
+      "field label, tlvType, valueOffset, valueType, endian, scale, unit",
+      "sample hex frame and expected decoded values"
+    ],
+    "generate_when_ready": "Return one importable protocol JSON object with kind = tlv.",
+    "fallback_when_not_fixed_offset": "Recommend firmware-side normalization to JSON Lines or line-values, or a reviewed source-code parser module."
+  },
   "browser_recipes": [
     {
       "id": "load_demo_dashboard",
@@ -146,6 +190,33 @@
         "Use [data-ai=\"settings-widget-title\"] and [data-ai=\"settings-widget-channel\"] when available."
       ],
       "success_signal": "Widget and settings panels can be opened and controlled with stable selectors."
+    },
+    {
+      "id": "import_workspace_json_online",
+      "goal": "Import a complete workspace JSON without local file upload.",
+      "path": "/serial?workspace=/examples/workspaces/vitals-dashboard.json",
+      "steps": [
+        "Open /serial?workspace=/examples/workspaces/vitals-dashboard.json for a repository-hosted workspace JSON.",
+        "Wait for [data-ai=\"serial-app\"].",
+        "Confirm [data-ai^=\"canvas-widget-\"] exists.",
+        "Alternatively click [data-ai=\"import-workspace-url\"] and enter /examples/workspaces/vitals-dashboard.json.",
+        "Use [data-ai=\"export-workspace\"] when the user wants to download the full workspace JSON."
+      ],
+      "success_signal": "The workspace imports from an online JSON URL and canvas widgets become visible."
+    },
+    {
+      "id": "send_file_line_by_line",
+      "goal": "Send a text/cfg/csv file to a connected serial or WebSocket port line by line.",
+      "path": "/serial?tab=terminal",
+      "steps": [
+        "Confirm a target port is connected before sending.",
+        "Use [data-ai=\"send-file-port-select\"] to choose the port.",
+        "Set [data-ai=\"send-file-delay-ms\"] for the inter-line delay.",
+        "Upload a .txt, .cfg, or .csv file through [data-ai=\"send-file-input\"].",
+        "Click [data-ai=\"send-file-start\"].",
+        "Open [data-ai=\"tab-terminal\"] and switch to [data-ai=\"terminal-mode-analysis\"] to verify TX logs."
+      ],
+      "success_signal": "[data-ai=\"terminal-log\"] contains TX rows and a file-send completion system log."
     }
   ],
   "honest_reporting_rules": [

@@ -402,16 +402,17 @@ watch(() => portsStore.ports.map(port => port.id), (portIds) => {
           <div class="bg-cat-surface rounded-xl border border-cat-border/70 p-2.5 space-y-2" data-ai="sidebar-send-file">
             <div class="text-xs text-cat-muted font-medium">发送文件</div>
             <div class="flex items-center gap-2">
-              <select v-model="sendFileTarget" class="flex-1 bg-cat-dark border border-cat-border rounded-lg px-2 py-1 text-xs">
+              <select v-model="sendFileTarget" data-ai="send-file-port-select" class="flex-1 bg-cat-dark border border-cat-border rounded-lg px-2 py-1 text-xs">
                 <option v-for="p in portsStore.ports" :key="p.id" :value="p.id">{{ p.label }}</option>
               </select>
-              <input type="number" v-model.number="sendFileDelayMs" min="0" step="10" class="w-14 bg-cat-dark border border-cat-border rounded-lg px-1 py-1 text-xs text-center">
+              <input type="number" v-model.number="sendFileDelayMs" data-ai="send-file-delay-ms" min="0" step="10" class="w-14 bg-cat-dark border border-cat-border rounded-lg px-1 py-1 text-xs text-center">
               <span class="text-[10px] text-cat-muted">ms</span>
             </div>
-            <input type="file" accept=".cfg,.txt,.csv" @change="onSendFileSelected" class="w-full text-[10px] text-cat-muted file:mr-1 file:px-2 file:py-0.5 file:rounded file:border-0 file:bg-cat-card file:text-cat-text">
+            <input type="file" accept=".cfg,.txt,.csv" data-ai="send-file-input" @change="onSendFileSelected" class="w-full text-[10px] text-cat-muted file:mr-1 file:px-2 file:py-0.5 file:rounded file:border-0 file:bg-cat-card file:text-cat-text">
             <button
               @click="doSendFile"
               :disabled="!sendFile || !sendFileTarget"
+              data-ai="send-file-start"
               class="w-full cat-btn py-1.5 rounded-lg text-xs text-white disabled:opacity-50"
             >
               发送 {{ sendFileName || '文件' }}
